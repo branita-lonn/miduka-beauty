@@ -201,11 +201,9 @@ export default function ProductFilters(props: ProductFiltersProps) {
 
       {/* Mobile sheet trigger */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetTrigger asChild>
-          <Button variant="outline" className="md:hidden rounded-full gap-2" id="mobile-filter-btn">
-            <Filter className="h-4 w-4" />
-            Filters
-          </Button>
+        <SheetTrigger render={<Button variant="outline" className="md:hidden rounded-full gap-2" id="mobile-filter-btn" />}>
+          <Filter className="h-4 w-4" />
+          Filters
         </SheetTrigger>
         <SheetContent side="left" className="w-80 flex flex-col gap-6 pt-8">
           <SheetHeader>

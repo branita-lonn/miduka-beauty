@@ -2,7 +2,7 @@
 // Server component — fetches StoreSettings; renders social links, copyright
 
 import Link from "next/link";
-import { Instagram, Facebook, MessageCircle } from "lucide-react";
+import { Globe, MessageCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import type { SocialLinks } from "@/types";
 
@@ -57,7 +57,7 @@ export default async function StoreFooter() {
                     aria-label="Instagram"
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <Instagram className="h-5 w-5" />
+                    <Globe className="h-5 w-5" />
                   </a>
                 )}
                 {socialLinks.facebook && (
@@ -68,7 +68,7 @@ export default async function StoreFooter() {
                     aria-label="Facebook"
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <Facebook className="h-5 w-5" />
+                    <Globe className="h-5 w-5" />
                   </a>
                 )}
                 {socialLinks.tiktok && (

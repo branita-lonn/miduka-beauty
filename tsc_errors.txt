@@ -1,0 +1,21 @@
+.next/dev/types/validator.ts(116,39): error TS2307: Cannot find module '../../../app/page.js' or its corresponding type declarations.
+.next/types/validator.ts(80,39): error TS2307: Cannot find module '../../app/page.js' or its corresponding type declarations.
+app/(store)/categories/[slug]/error.tsx(27,35): error TS2322: Type '{ children: Element; variant: "outline"; asChild: true; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { ...; }; }> & ClassProp) | undefined) => string>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { ...; }; }> & ClassProp) | undefined) => string>'.
+app/(store)/products/[slug]/error.tsx(27,35): error TS2322: Type '{ children: Element; variant: "outline"; asChild: true; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { ...; }; }> & ClassProp) | undefined) => string>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { ...; }; }> & ClassProp) | undefined) => string>'.
+app/(store)/search/page.tsx(78,37): error TS2322: Type '{ children: Element; variant: "outline"; asChild: true; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { ...; }; }> & ClassProp) | undefined) => string>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & ButtonProps & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; outline: string; secondary: string; ghost: string; destructive: string; link: string; }; size: { ...; }; }> & ClassProp) | undefined) => string>'.
+components/store/mobile-bottom-nav.tsx(28,47): error TS2339: Property 'badge' does not exist on type '{ readonly href: "/"; readonly label: "Home"; readonly icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; } | { ...; } | { ...; } | { ...; } | { ...; }'.
+components/store/product-filters.tsx(204,23): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & Props<unknown>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & Props<unknown>'.
+components/store/product-grid.tsx(137,17): error TS2322: Type '{ href: string; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & ClassAttributes<HTMLAnchorElement> & AnchorHTMLAttributes<HTMLAnchorElement>'.
+  Property 'disabled' does not exist on type 'IntrinsicAttributes & ClassAttributes<HTMLAnchorElement> & AnchorHTMLAttributes<HTMLAnchorElement>'.
+components/store/product-grid.tsx(168,17): error TS2322: Type '{ href: string; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & ClassAttributes<HTMLAnchorElement> & AnchorHTMLAttributes<HTMLAnchorElement>'.
+  Property 'disabled' does not exist on type 'IntrinsicAttributes & ClassAttributes<HTMLAnchorElement> & AnchorHTMLAttributes<HTMLAnchorElement>'.
+components/store/product-sort.tsx(37,29): error TS2322: Type '(value: string) => void' is not assignable to type '(value: string | null, eventDetails: SelectRootChangeEventDetails) => void'.
+  Types of parameters 'value' and 'value' are incompatible.
+    Type 'string | null' is not assignable to type 'string'.
+      Type 'null' is not assignable to type 'string'.
+components/store/store-footer.tsx(5,10): error TS2305: Module '"lucide-react"' has no exported member 'Instagram'.
+components/store/store-footer.tsx(5,21): error TS2305: Module '"lucide-react"' has no exported member 'Facebook'.

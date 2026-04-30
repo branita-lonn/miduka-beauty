@@ -1,0 +1,5 @@
+components/ui/pagination.tsx(45,3): error TS1109: Expression expected.
+components/ui/pagination.tsx(46,1): error TS1128: Declaration or statement expected.
+components/ui/pagination.tsx(46,2): error TS1128: Declaration or statement expected.
+components/ui/pagination.tsx(46,4): error TS1434: Unexpected keyword or identifier.
+components/ui/pagination.tsx(46,23): error TS1128: Declaration or statement expected.

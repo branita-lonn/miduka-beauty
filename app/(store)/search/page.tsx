@@ -8,7 +8,8 @@ import ProductGrid from "@/components/store/product-grid";
 import ProductSort from "@/components/store/product-sort";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -75,9 +76,12 @@ export default async function SearchPage({ searchParams }: Props) {
           <p className="text-sm text-muted-foreground">
             Not finding what you&apos;re looking for?
           </p>
-          <Button variant="outline" asChild className="rounded-full px-6">
-            <Link href="/categories">Browse All Categories</Link>
-          </Button>
+          <Link 
+            href="/categories" 
+            className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-6")}
+          >
+            Browse All Categories
+          </Link>
         </div>
       )}
     </div>

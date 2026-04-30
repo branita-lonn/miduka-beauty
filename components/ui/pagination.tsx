@@ -5,6 +5,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import Link from "next/link";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -36,16 +37,17 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 type PaginationLinkProps = {
   isActive?: boolean;
   disabled?: boolean;
-} & React.ComponentProps<"a">;
-
+} & React.ComponentProps<typeof Link>;
 function PaginationLink({
   className,
   isActive,
   disabled,
+  href,
   ...props
 }: PaginationLinkProps) {
   return (
-    <a
+    <Link
+      href={disabled ? "#" : href ?? "#"}
       aria-current={isActive ? "page" : undefined}
       aria-disabled={disabled}
       className={cn(
@@ -61,12 +63,14 @@ function PaginationLink({
 
 function PaginationPrevious({
   className,
+  disabled,
   ...props
-}: React.ComponentProps<"a">) {
+}: React.ComponentProps<typeof PaginationLink>) {
   return (
     <PaginationLink
       aria-label="Go to previous page"
       className={cn("gap-1 px-2.5 w-auto", className)}
+      disabled={disabled}
       {...props}
     >
       <ChevronLeft className="h-4 w-4" />
@@ -75,11 +79,16 @@ function PaginationPrevious({
   );
 }
 
-function PaginationNext({ className, ...props }: React.ComponentProps<"a">) {
+function PaginationNext({
+  className,
+  disabled,
+  ...props
+}: React.ComponentProps<typeof PaginationLink>) {
   return (
     <PaginationLink
       aria-label="Go to next page"
       className={cn("gap-1 px-2.5 w-auto", className)}
+      disabled={disabled}
       {...props}
     >
       <span className="hidden sm:inline text-sm">Next</span>

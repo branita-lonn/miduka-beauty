@@ -9,11 +9,11 @@ import { Home, Grid2X2, ShoppingCart, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/categories", label: "Categories", icon: Grid2X2 },
+  { href: "/", label: "Home", icon: Home, badge: undefined },
+  { href: "/categories", label: "Categories", icon: Grid2X2, badge: undefined },
   { href: "/cart", label: "Cart", icon: ShoppingCart, badge: 0 },
-  { href: "/account/wishlist", label: "Wishlist", icon: Heart },
-  { href: "/account", label: "Account", icon: User },
+  { href: "/account/wishlist", label: "Wishlist", icon: Heart, badge: undefined },
+  { href: "/account", label: "Account", icon: User, badge: undefined },
 ] as const;
 
 export default function MobileBottomNav() {

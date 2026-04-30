@@ -26,7 +26,8 @@ export default function ProductSort() {
   const searchParams = useSearchParams();
   const current = searchParams.get("sort") ?? "newest";
 
-  function handleChange(value: string) {
+  function handleChange(value: string | null) {
+    if (!value) return;
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", value);
     params.set("page", "1");
