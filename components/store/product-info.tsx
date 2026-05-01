@@ -11,6 +11,8 @@ import { useCart } from "@/components/store/cart-provider";
 import { formatCurrency } from "@/lib/utils";
 import type { ProductWithRelationsSerialized } from "@/types";
 import { cn } from "@/lib/utils";
+import StockAlertButton from "@/components/store/stock-alert-button";
+import { useWishlist } from "@/components/store/wishlist-provider";
 
 interface ProductInfoProps {
   product: ProductWithRelationsSerialized;
@@ -24,6 +26,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   );
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+
+  const { isWishlisted, toggleWishlist, isLoading: wishlistLoading } = useWishlist();
+  const wishlisted = isWishlisted(product.id);
 
   const selectedVariant = product.variants.find(
     (v) => v.id === selectedVariantId
@@ -133,6 +138,15 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         </div>
       )}
 
+      {/* Stock Alert for out of stock */}
+      {isOutOfStock && (
+        <StockAlertButton 
+          productId={product.id} 
+          variantId={selectedVariantId}
+          isOutOfStock={isOutOfStock}
+        />
+      )}
+
       {/* Colour selector */}
       {colours.length > 0 && (
         <div className="space-y-2">
@@ -238,11 +252,16 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           id="wishlist-button"
           variant="outline"
           size="lg"
-          className="rounded-2xl gap-2 sm:w-auto"
-          aria-label="Add to wishlist"
+          className={cn(
+            "rounded-2xl gap-2 sm:w-auto transition-all duration-300",
+            wishlisted && "bg-primary/5 border-primary/30 text-primary"
+          )}
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          disabled={wishlistLoading}
+          onClick={() => toggleWishlist(product.id)}
         >
-          <Heart className="h-5 w-5" />
-          <span className="hidden sm:inline">Wishlist</span>
+          <Heart className={cn("h-5 w-5", wishlisted && "fill-current")} />
+          <span className="hidden sm:inline">{wishlisted ? "Wishlisted" : "Wishlist"}</span>
         </Button>
       </div>
     </div>
