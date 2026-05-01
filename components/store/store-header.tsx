@@ -1,24 +1,23 @@
 // components/store/store-header.tsx
-// Server component — fetches StoreSettings for logo/name; embeds client search bar
+// Client Component — renders header with cart badge/drawer toggle using CartContext.
+// Store name/logo are passed as props from StoreHeaderServer (RSC).
+
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Heart } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import StoreSearchBar from "@/components/store/store-search-bar";
+import { useCart } from "@/components/store/cart-provider";
 
-export default async function StoreHeader() {
-  const settings = await prisma.storeSettings.findFirst({
-    select: {
-      storeName: true,
-      logoUrl: true,
-      storeTagline: true,
-    },
-  });
+interface StoreHeaderProps {
+  storeName: string;
+  logoUrl: string | null;
+}
 
-  const storeName = settings?.storeName ?? "MiDuka";
-  const logoUrl = settings?.logoUrl ?? null;
+export default function StoreHeader({ storeName, logoUrl }: StoreHeaderProps) {
+  const { itemCount, setIsOpen } = useCart();
 
   return (
     <header className="sticky top-0 z-40 w-full bg-card border-b border-border">
@@ -55,14 +54,23 @@ export default async function StoreHeader() {
               <Heart className="h-5 w-5" />
             </Button>
           </Link>
-          <Link href="/cart" aria-label="Cart" className="relative">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ShoppingCart className="h-5 w-5" />
+
+          {/* Cart icon — opens drawer */}
+          <Button
+            id="header-cart-button"
+            variant="ghost"
+            size="icon"
+            className="rounded-full relative"
+            aria-label="Open cart"
+            onClick={() => setIsOpen(true)}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {itemCount > 0 && (
               <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                0
+                {itemCount > 9 ? "9+" : itemCount}
               </span>
-            </Button>
-          </Link>
+            )}
+          </Button>
         </div>
       </div>
     </header>
