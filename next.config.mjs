@@ -12,6 +12,7 @@ const nextConfig = {
   },
   // Suppress hydration warning from ngrok or other proxies
   allowedDevOrigins: ['flashback-oops-deletion.ngrok-free.dev'],
+  turbopack: {},
 };
 
 const withPWA = withPWAInit({
