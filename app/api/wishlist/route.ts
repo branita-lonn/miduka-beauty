@@ -26,7 +26,6 @@ export async function GET() {
                 },
                 flashSale: true,
               },
-              },
             },
           },
           orderBy: { createdAt: "desc" },

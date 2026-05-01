@@ -45,7 +45,7 @@ export default function HomepageSection({
                 name={product.name}
                 price={Number(product.price)}
                 compareAtPrice={product.compareAtPrice ? Number(product.compareAtPrice) : undefined}
-                primaryImage={product.images[0]?.url}
+                primaryImage={product.images?.[0]?.url}
                 isOnSale={product.isOnSale}
                 stockQuantity={product.stockQuantity}
                 createdAt={product.createdAt}
