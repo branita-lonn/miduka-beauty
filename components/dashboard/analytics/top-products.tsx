@@ -46,6 +46,7 @@ export function TopProducts({ byRevenue, byUnits }: TopProductsProps) {
                     alt={product.name} 
                     fill 
                     className="object-cover group-hover:scale-110 transition-transform duration-300" 
+                    sizes="48px"
                   />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No img</div>

@@ -12,6 +12,14 @@ import { formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/dashboard/orders/status-badge";
 import Link from "next/link";
 import { OrderStatusControl } from "@/components/dashboard/orders/order-status-control";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 
 interface OrderDetailPageProps {
   params: Promise<{ orderId: string }>;
@@ -63,18 +71,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </div>
 
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            className="rounded-full gap-2"
-            onClick={() => {
-                // This is a server component, so we can't use onClick directly.
-                // We'll need a client component for the actions or use a hack.
-                // I'll wrap the actions in a client component.
-            }}
-          >
-            <Printer className="h-4 w-4" />
-            Print Receipt
-          </Button>
           <OrderStatusControl orderId={order.id} initialStatus={order.status} />
         </div>
       </div>
