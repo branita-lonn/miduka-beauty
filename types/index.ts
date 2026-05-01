@@ -28,12 +28,6 @@ export interface StoreSettingsData {
   heroCtaLink: string | null;
 }
 
-export interface ProductImagePublic {
-  id: string;
-  url: string;
-  altText: string | null;
-  sortOrder: number;
-}
 
 export interface ProductVariantPublic {
   id: string;

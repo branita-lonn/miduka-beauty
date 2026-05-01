@@ -1,20 +1,33 @@
 // components/dashboard/image-upload.tsx
-// Multi-image upload component with drag-to-reorder
+// Multi-image upload component with drag-to-reorder and colour assignment
 
 "use client";
 
 import React, { useState, DragEvent } from "react";
 import Image from "next/image";
-import { Upload, GripVertical, X, Loader2 } from "lucide-react";
+import { Upload, GripVertical, X, Loader2, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface ImageData {
+  url: string;
+  colour?: string | null;
+}
 
 interface ImageUploadProps {
-  value: string[];
-  onChange: (urls: string[]) => void;
+  value: ImageData[];
+  onChange: (images: ImageData[]) => void;
   onRemove: (url: string) => void;
   maxImages?: number;
   folder?: string;
+  availableColours?: string[];
 }
 
 export function ImageUpload({
@@ -23,6 +36,7 @@ export function ImageUpload({
   onRemove,
   maxImages = 8,
   folder = "miduka/products",
+  availableColours = [],
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -48,20 +62,18 @@ export function ImageUpload({
     setIsUploading(true);
 
     try {
-      const newUrls: string[] = [];
+      const newImages: ImageData[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // Validate file type
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-          toast.error(`File ${file.name} is not a supported format (JPEG, PNG, WEBP only).`);
+          toast.error(`File ${file.name} is not a supported format.`);
           continue;
         }
 
-        // Validate file size (5MB)
         if (file.size > 5 * 1024 * 1024) {
-          toast.error(`File ${file.name} exceeds the 5MB size limit.`);
+          toast.error(`File ${file.name} exceeds 5MB.`);
           continue;
         }
 
@@ -69,43 +81,34 @@ export function ImageUpload({
 
         const response = await fetch("/api/upload", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ base64, folder }),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to upload image");
+          throw new Error(errorData.error || "Failed to upload");
         }
 
         const data = await response.json();
-        newUrls.push(data.url);
+        newImages.push({ url: data.url, colour: null });
       }
 
-      if (newUrls.length > 0) {
-        onChange([...value, ...newUrls]);
-        toast.success(`Successfully uploaded ${newUrls.length} image(s).`);
+      if (newImages.length > 0) {
+        onChange([...value, ...newImages]);
+        toast.success(`Uploaded ${newImages.length} image(s).`);
       }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        toast.error(`Upload error: ${error.message}`);
-      } else {
-        toast.error("An unknown error occurred during upload.");
-      }
+    } catch (error: any) {
+      toast.error(error.message || "Upload error");
     } finally {
       setIsUploading(false);
-      if (e.target) {
-        e.target.value = "";
-      }
+      if (e.target) e.target.value = "";
     }
   };
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = "move";
-    // Required for Firefox
     e.dataTransfer.setData("text/plain", index.toString());
   };
 
@@ -116,7 +119,6 @@ export function ImageUpload({
 
   const handleDrop = (e: DragEvent<HTMLDivElement>, dropIndex: number) => {
     e.preventDefault();
-
     if (draggedIndex === null || draggedIndex === dropIndex) {
       setDraggedIndex(null);
       return;
@@ -131,56 +133,95 @@ export function ImageUpload({
     setDraggedIndex(null);
   };
 
+  const updateImageColour = (index: number, colour: string) => {
+    const newValues = [...value];
+    newValues[index] = { 
+      ...newValues[index], 
+      colour: colour === "none" ? null : colour 
+    };
+    onChange(newValues);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-        {value.map((url, index) => (
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {value.map((img, index) => (
           <div
-            key={url}
+            key={img.url}
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
             onDragOver={(e) => handleDragOver(e)}
             onDrop={(e) => handleDrop(e, index)}
             className={cn(
-              "relative aspect-square rounded-xl border bg-muted overflow-hidden group cursor-grab active:cursor-grabbing",
+              "flex flex-col gap-2 p-2 rounded-2xl border bg-card/50 transition-all duration-300 group",
               draggedIndex === index && "opacity-50"
             )}
           >
-            <div className="absolute top-2 right-2 z-10 flex gap-1">
-              <button
-                type="button"
-                onClick={() => onRemove(url)}
-                className="bg-destructive text-destructive-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-destructive/90"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="absolute top-2 left-2 z-10 flex gap-1">
-              <div className="bg-background/80 text-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm backdrop-blur-sm">
-                <GripVertical className="h-4 w-4" />
+            <div className="relative aspect-square rounded-xl overflow-hidden cursor-grab active:cursor-grabbing">
+              <div className="absolute top-2 right-2 z-10">
+                <button
+                  type="button"
+                  onClick={() => onRemove(img.url)}
+                  className="bg-destructive/90 text-destructive-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
+              <div className="absolute top-2 left-2 z-10">
+                <div className="bg-background/80 text-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm backdrop-blur-sm">
+                  <GripVertical className="h-4 w-4" />
+                </div>
+              </div>
+              {index === 0 && (
+                <div className="absolute bottom-2 left-2 z-10">
+                  <span className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full shadow-sm font-bold uppercase tracking-tight">
+                    Cover
+                  </span>
+                </div>
+              )}
+              <Image fill src={img.url} alt={`Upload ${index + 1}`} className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
             </div>
-            {index === 0 && (
-              <div className="absolute bottom-2 left-2 z-10">
-                <span className="bg-primary text-primary-foreground text-xs px-2.5 py-1 rounded-full shadow-sm font-medium">
-                  Cover
-                </span>
+
+            {/* Colour Assignment */}
+            {availableColours.length > 0 && (
+              <div className="px-1 py-1">
+                <Select
+                  value={img.colour || "none"}
+                  onValueChange={(val) => updateImageColour(index, val)}
+                >
+                  <SelectTrigger className="h-8 text-[10px] bg-background/50 border-none shadow-none focus:ring-0">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Palette className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                      <SelectValue placeholder="Assign colour" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No specific colour</SelectItem>
+                    {availableColours.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
-            <Image fill src={url} alt={`Upload ${index + 1}`} className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
           </div>
         ))}
+        
         {value.length < maxImages && (
-          <label className="relative flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-xl border-muted-foreground/25 hover:bg-muted/50 hover:border-muted-foreground/50 transition-colors cursor-pointer overflow-hidden group">
+          <label className="relative flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-2xl border-muted-foreground/25 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300 cursor-pointer overflow-hidden group">
             {isUploading && (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/50 backdrop-blur-sm">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             )}
-            <div className="flex flex-col items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors p-4 text-center">
-              <Upload className="h-6 w-6 mb-2" />
-              <span className="text-sm font-medium">Upload Image</span>
-              <span className="text-[10px] mt-1 opacity-70">Max 5MB</span>
+            <div className="flex flex-col items-center justify-center text-muted-foreground group-hover:text-primary transition-colors p-4 text-center">
+              <div className="bg-muted p-3 rounded-full group-hover:bg-primary/10 transition-colors mb-3">
+                <Upload className="h-6 w-6" />
+              </div>
+              <span className="text-sm font-semibold">Add Image</span>
+              <span className="text-[10px] mt-1 opacity-70">JPEG, PNG, WEBP up to 5MB</span>
             </div>
             <input
               type="file"
@@ -193,9 +234,9 @@ export function ImageUpload({
           </label>
         )}
       </div>
-      {value.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Drag and drop to reorder images. The first image will be the primary cover image.
+      {value.length > 1 && (
+        <p className="text-[10px] text-muted-foreground text-center">
+          Drag to reorder. The first image is the default product cover.
         </p>
       )}
     </div>

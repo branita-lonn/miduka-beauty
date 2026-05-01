@@ -3,18 +3,29 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImageGalleryProps {
-  images: { id: string; url: string; altText: string | null }[];
+  images: { id: string; url: string; altText: string | null; colour?: string | null }[];
   productName: string;
+  selectedColour?: string | null;
 }
 
-export default function ImageGallery({ images, productName }: ImageGalleryProps) {
+export default function ImageGallery({ images, productName, selectedColour }: ImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+
+  // Auto-switch to first image of selected colour
+  useEffect(() => {
+    if (!selectedColour) return;
+    
+    const colourIndex = images.findIndex(img => img.colour === selectedColour);
+    if (colourIndex !== -1) {
+      setActiveIndex(colourIndex);
+    }
+  }, [selectedColour, images]);
 
   if (images.length === 0) {
     return (

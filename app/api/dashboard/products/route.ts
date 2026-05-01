@@ -98,13 +98,17 @@ export async function POST(req: NextRequest) {
       });
 
       if (images && images.length > 0) {
-        await tx.productImage.createMany({
-          data: images.map((url: string, index: number) => ({
-            productId: newProduct.id,
-            url,
-            sortOrder: index,
-          })),
-        });
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          await tx.productImage.create({
+            data: {
+              productId: newProduct.id,
+              url: typeof img === "string" ? img : img.url,
+              colour: typeof img === "string" ? null : (img.colour || null),
+              sortOrder: i,
+            },
+          });
+        }
       }
 
       if (variants && variants.length > 0) {
@@ -127,12 +131,8 @@ export async function POST(req: NextRequest) {
 
     console.log("PRODUCT CREATED SUCCESSFULLY:", product.id);
     return NextResponse.json(product);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error(`[PRODUCTS_POST] ${error.message}`);
-    } else {
-      console.error(`[PRODUCTS_POST] Unknown error`);
-    }
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  } catch (error: any) {
+    console.error(`[PRODUCTS_POST]`, error);
+    return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
   }
 }

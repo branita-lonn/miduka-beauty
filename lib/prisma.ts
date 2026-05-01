@@ -1,5 +1,4 @@
 // lib/prisma.ts
-// Singleton Prisma client to avoid multiple instances in Next.js dev mode
 
 import { PrismaClient } from "@prisma/client";
 

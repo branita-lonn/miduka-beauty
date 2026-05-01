@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShoppingCart, Heart, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,31 +16,55 @@ import { useWishlist } from "@/components/store/wishlist-provider";
 
 interface ProductInfoProps {
   product: ProductWithRelationsSerialized;
+  externalSelectedColour?: string | null;
+  onColourChange?: (colour: string | null) => void;
 }
 
-export default function ProductInfo({ product }: ProductInfoProps) {
+export default function ProductInfo({ 
+  product, 
+  externalSelectedColour, 
+  onColourChange 
+}: ProductInfoProps) {
   const { addItem } = useCart();
 
-  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(
-    product.variants.length === 1 ? product.variants[0].id : undefined
-  );
+  const [selectedColour, setSelectedColour] = useState<string | null>(externalSelectedColour ?? null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<string | null>(null);
+
+  // Sync internal state with external state
+  useEffect(() => {
+    if (externalSelectedColour !== undefined) {
+      setSelectedColour(externalSelectedColour);
+    }
+  }, [externalSelectedColour]);
+
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
   const { isWishlisted, toggleWishlist, isLoading: wishlistLoading } = useWishlist();
   const wishlisted = isWishlisted(product.id);
 
+  // Derive selected variant from attributes
   const selectedVariant = product.variants.find(
-    (v) => v.id === selectedVariantId
+    (v) =>
+      (selectedColour ? v.colour === selectedColour : !v.colour) &&
+      (selectedSize ? v.size === selectedSize : !v.size) &&
+      (selectedMaterial ? v.material === selectedMaterial : !v.material) &&
+      v.isActive
   );
+
+  const selectedVariantId = selectedVariant?.id;
 
   // Effective price (variant override or base price)
   const effectivePrice = selectedVariant?.priceOverride ?? product.price;
 
   // Stock
+  const totalVariantStock = product.variants.reduce((acc, v) => acc + (v.stockQuantity ?? 0), 0);
   const stockQty =
     product.variants.length > 0
-      ? selectedVariant?.stockQuantity ?? 0
+      ? (selectedVariant 
+          ? selectedVariant.stockQuantity 
+          : totalVariantStock)
       : product.stockQuantity;
 
   const isOutOfStock = stockQty === 0;
@@ -49,18 +73,15 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   // Group variant options
   const colours = [...new Set(product.variants.map((v) => v.colour).filter(Boolean))] as string[];
   const sizes = [...new Set(product.variants.map((v) => v.size).filter(Boolean))] as string[];
+  const materials = [...new Set(product.variants.map((v) => v.material).filter(Boolean))] as string[];
 
-  const selectedColour = selectedVariant?.colour ?? null;
-  const selectedSize = selectedVariant?.size ?? null;
-
-  function selectVariantByOption(colour: string | null, size: string | null) {
-    const match = product.variants.find(
-      (v) =>
-        (colour ? v.colour === colour : !v.colour) &&
-        (size ? v.size === size : !v.size) &&
-        v.isActive
-    );
-    setSelectedVariantId(match?.id);
+  function handleOptionSelect(type: 'colour' | 'size' | 'material', value: string) {
+    if (type === 'colour') {
+      setSelectedColour(value);
+      onColourChange?.(value);
+    }
+    if (type === 'size') setSelectedSize(value);
+    if (type === 'material') setSelectedMaterial(value);
     setQuantity(1);
   }
 
@@ -160,7 +181,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
             {colours.map((colour) => (
               <button
                 key={colour}
-                onClick={() => selectVariantByOption(colour, selectedSize)}
+                onClick={() => handleOptionSelect('colour', colour)}
                 className={cn(
                   "rounded-full border-2 px-4 py-1.5 text-sm font-medium transition-all",
                   selectedColour === colour
@@ -188,7 +209,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
             {sizes.map((size) => (
               <button
                 key={size}
-                onClick={() => selectVariantByOption(selectedColour, size)}
+                onClick={() => handleOptionSelect('size', size)}
                 className={cn(
                   "rounded-xl border-2 px-4 py-1.5 text-sm font-medium transition-all",
                   selectedSize === size
@@ -197,6 +218,34 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                 )}
               >
                 {size}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Material selector */}
+      {materials.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">
+            Material:{" "}
+            <span className="font-normal text-muted-foreground">
+              {selectedMaterial ?? "Select"}
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {materials.map((material) => (
+              <button
+                key={material}
+                onClick={() => handleOptionSelect('material', material)}
+                className={cn(
+                  "rounded-xl border-2 px-4 py-1.5 text-sm font-medium transition-all",
+                  selectedMaterial === material
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                {material}
               </button>
             ))}
           </div>
@@ -242,11 +291,17 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           id="add-to-cart-button"
           size="lg"
           className="flex-1 rounded-2xl gap-2"
-          disabled={isOutOfStock || isAdding}
+          disabled={isOutOfStock || isAdding || (product.variants.length > 0 && !selectedVariantId)}
           onClick={() => void handleAddToCart()}
         >
           <ShoppingCart className="h-5 w-5" />
-          {isAdding ? "Adding…" : isOutOfStock ? "Out of Stock" : "Add to Cart"}
+          {isAdding 
+            ? "Adding…" 
+            : isOutOfStock 
+              ? "Out of Stock" 
+              : (product.variants.length > 0 && !selectedVariantId)
+                ? "Select Options"
+                : "Add to Cart"}
         </Button>
         <Button
           id="wishlist-button"
