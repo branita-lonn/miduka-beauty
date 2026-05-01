@@ -22,9 +22,9 @@ import { OrderStatus, PaymentStatus } from "@prisma/client";
 import Image from "next/image";
 
 interface OrderDetailPageProps {
-  params: {
+  params: Promise<{
     orderId: string;
-  };
+  }>;
 }
 
 const statusStyles: Record<OrderStatus, { label: string; variant: string }> = {
@@ -45,7 +45,7 @@ const paymentStatusStyles: Record<PaymentStatus, { label: string; variant: strin
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const session = await auth();
   const userId = session?.user?.id;
-  const { orderId } = params;
+  const { orderId } = await params;
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
