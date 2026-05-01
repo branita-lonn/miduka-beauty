@@ -6,6 +6,7 @@ import StoreFooter from "@/components/store/store-footer";
 import MobileBottomNav from "@/components/store/mobile-bottom-nav";
 import CartProvider from "@/components/store/cart-provider";
 import CartDrawer from "@/components/store/cart-drawer";
+import WishlistProvider from "@/components/store/wishlist-provider";
 
 export default function StoreLayout({
   children,
@@ -14,7 +15,8 @@ export default function StoreLayout({
 }) {
   return (
     <CartProvider>
-      <div className="min-h-screen flex flex-col bg-background">
+      <WishlistProvider>
+        <div className="min-h-screen flex flex-col bg-background">
         <StoreHeaderServer />
         <CartDrawer />
         {/* pb-16 on mobile reserves space for the fixed bottom nav */}
@@ -22,6 +24,7 @@ export default function StoreLayout({
         <StoreFooter />
         <MobileBottomNav />
       </div>
+      </WishlistProvider>
     </CartProvider>
   );
 }

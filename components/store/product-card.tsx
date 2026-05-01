@@ -10,6 +10,7 @@ import { Heart, ShoppingBag, Star } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { ProductCardProps } from "@/types";
+import { useWishlist } from "@/components/store/wishlist-provider";
 
 function isNewProduct(createdAt: string | Date): boolean {
   const created =
@@ -31,7 +32,11 @@ export default function ProductCard({
   rating = 0,
   reviewCount = 0,
   priority = false,
+  id,
 }: ProductCardProps) {
+  const { isWishlisted, toggleWishlist, isLoading } = useWishlist();
+  const wishlisted = isWishlisted(id);
+
   const isNew = isNewProduct(createdAt);
   const isOutOfStock = stockQuantity === 0;
   const discount =
@@ -73,13 +78,23 @@ export default function ProductCard({
           )}
         </div>
 
-        {/* Wishlist button — wired in Stage 5 */}
+        {/* Wishlist button */}
         <button
-          aria-label="Add to wishlist"
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 border border-border/50"
-          onClick={(e) => e.preventDefault()}
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          className={cn(
+            "absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-sm transition-all duration-200 border border-border/50",
+            wishlisted 
+              ? "bg-primary text-primary-foreground opacity-100" 
+              : "bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100"
+          )}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(id);
+          }}
+          disabled={isLoading}
         >
-          <Heart className="h-3.5 w-3.5 text-muted-foreground" />
+          <Heart className={cn("h-3.5 w-3.5", wishlisted && "fill-current")} />
         </button>
       </div>
 
