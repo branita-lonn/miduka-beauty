@@ -14,17 +14,20 @@ import { cn } from "@/lib/utils";
 import StockAlertButton from "@/components/store/stock-alert-button";
 import { useWishlist } from "@/components/store/wishlist-provider";
 import { FlashSaleCountdown } from "@/components/store/flash-sale-countdown";
+import { ProductBundleCallout } from "@/components/store/product-bundle-callout";
 
 interface ProductInfoProps {
   product: ProductWithRelationsSerialized;
   externalSelectedColour?: string | null;
   onColourChange?: (colour: string | null) => void;
+  bundles?: any[];
 }
 
 export default function ProductInfo({ 
   product, 
   externalSelectedColour, 
-  onColourChange 
+  onColourChange,
+  bundles = []
 }: ProductInfoProps) {
   const { addItem } = useCart();
 
@@ -339,6 +342,9 @@ export default function ProductInfo({
           <span className="hidden sm:inline">{wishlisted ? "Wishlisted" : "Wishlist"}</span>
         </Button>
       </div>
+
+      {/* Bundles */}
+      <ProductBundleCallout bundles={bundles} currentProductId={product.id} />
     </div>
   );
 }

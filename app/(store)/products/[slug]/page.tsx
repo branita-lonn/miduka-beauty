@@ -12,6 +12,7 @@ import Script from "next/script";
 import { ReviewsSection } from "@/components/store/reviews-section";
 import { ProductWithRelationsSerialized } from "@/types";
 import { auth } from "@/auth";
+import { getBundlesForProduct } from "@/lib/bundles";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -73,7 +74,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   }
 
   // Fetch review data for initial display
-  const [avgRating, totalReviews, ratingGroups] = await Promise.all([
+  const [avgRating, totalReviews, ratingGroups, bundles] = await Promise.all([
     prisma.review.aggregate({
       where: { productId: product.id },
       _avg: { rating: true },
@@ -86,6 +87,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       where: { productId: product.id },
       _count: { id: true },
     }),
+    getBundlesForProduct(product.id),
   ]);
 
   const ratingBreakdown: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -167,7 +169,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           <span className="text-foreground font-medium">{product.name}</span>
         </nav>
 
-        <ProductDetailView product={serializedProduct} />
+        <ProductDetailView product={serializedProduct} bundles={bundles} />
 
         {/* Description & Specs Tab Style */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">

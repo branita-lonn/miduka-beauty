@@ -10,9 +10,10 @@ import { ProductWithRelationsSerialized } from "@/types";
 
 interface ProductDetailViewProps {
   product: ProductWithRelationsSerialized;
+  bundles?: any[];
 }
 
-export default function ProductDetailView({ product }: ProductDetailViewProps) {
+export default function ProductDetailView({ product, bundles = [] }: ProductDetailViewProps) {
   // Lift colour state up to coordinate between gallery and info
   const [selectedColour, setSelectedColour] = useState<string | null>(null);
 
@@ -49,6 +50,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
           product={product} 
           externalSelectedColour={selectedColour}
           onColourChange={setSelectedColour}
+          bundles={bundles}
         />
       </div>
     </div>
