@@ -16,12 +16,13 @@ import {
   Eye,
   ShoppingCart,
   Package,
-  Tags
+  Tags,
+  Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import Link from "next/link";
 import { StatusBadge } from "@/components/dashboard/orders/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,14 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
         take: 10,
         orderBy: { createdAt: "desc" },
         include: { product: { select: { name: true, slug: true } } }
+      },
+      loyaltyAccount: {
+        include: {
+          transactions: {
+            take: 5,
+            orderBy: { createdAt: "desc" }
+          }
+        }
       }
     }
   });
@@ -166,6 +175,47 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
                         ))}
                     </div>
                 )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-border/50 bg-card/50 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/30">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Coins className="h-4 w-4 text-amber-500" />
+                Loyalty Program
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Current Balance</span>
+                <span className="text-lg font-bold text-amber-600">{user.loyaltyAccount?.points || 0} pts</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Lifetime Earned</span>
+                <span className="text-sm font-medium">{user.loyaltyAccount?.lifetimePoints || 0} pts</span>
+              </div>
+              
+              {user.loyaltyAccount?.transactions && user.loyaltyAccount.transactions.length > 0 && (
+                <div className="pt-4 space-y-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recent Activity</p>
+                  <div className="space-y-2">
+                    {user.loyaltyAccount.transactions.map((tx) => (
+                      <div key={tx.id} className="flex justify-between items-start text-xs">
+                        <div className="space-y-0.5">
+                          <p className="font-medium">{tx.description}</p>
+                          <p className="text-[10px] text-muted-foreground">{format(tx.createdAt, "MMM dd")}</p>
+                        </div>
+                        <span className={cn(
+                          "font-bold",
+                          tx.type === "EARN" ? "text-emerald-600" : "text-amber-600"
+                        )}>
+                          {tx.type === "EARN" ? "+" : "-"}{tx.points}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

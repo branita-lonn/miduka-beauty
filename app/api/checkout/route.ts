@@ -217,6 +217,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // e. Clear Cart
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
+      // g. Mark Abandoned Cart as Converted
+      await tx.abandonedCartRecord.updateMany({
+        where: { cartId: cart.id, convertedAt: null },
+        data: { convertedAt: new Date() }
+      });
+
       return newOrder;
     });
 
