@@ -60,7 +60,9 @@ export async function initiateStkPush({ phoneNumber, amount, accountReference, t
   const password = Buffer.from(`${config.shortcode}${config.passkey}${timestamp}`).toString("base64");
 
   const url = `${getBaseUrl()}/mpesa/stkpush/v1/processrequest`;
-  const callbackUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/mpesa`;
+  
+  // Use MPESA_CALLBACK_URL if provided, otherwise fall back to NEXTAUTH_URL
+  const callbackUrl = process.env.MPESA_CALLBACK_URL || `${process.env.NEXTAUTH_URL}/api/webhooks/mpesa`;
 
   const payload = {
     BusinessShortCode: config.shortcode,

@@ -8,6 +8,7 @@ const nextConfig = {
       },
     ],
   },
+  allowedDevOrigins: ['flashback-oops-deletion.ngrok-free.dev'],
 };
 
 export default nextConfig;
