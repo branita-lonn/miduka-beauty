@@ -32,12 +32,15 @@ function toCardProps(p: RawProduct) {
     isFeatured: p.isFeatured,
     stockQuantity: p.stockQuantity,
     createdAt: p.createdAt.toISOString(),
+    reviewCount: p.reviews.length,
+    rating: p.reviews.length > 0 ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / p.reviews.length : 0,
   };
 }
 
 const PRODUCT_INCLUDE = {
   images: { select: { url: true as const, sortOrder: true as const } },
   category: { select: { name: true as const, slug: true as const } },
+  reviews: { select: { rating: true as const } },
 } satisfies Prisma.ProductInclude;
 
 // ─── Page ─────────────────────────────────────────────────────────────────

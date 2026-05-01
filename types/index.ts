@@ -64,6 +64,8 @@ export interface ProductPublic {
   category: { id: string; name: string; slug: string } | null;
   images: ProductImagePublic[];
   variants: ProductVariantPublic[];
+  rating: number;
+  reviewCount: number;
 }
 
 export interface ProductsApiResponse {
@@ -150,4 +152,39 @@ export interface ProductFormValues {
   stockQuantity: number;
   images: string[];
   variants: VariantInput[];
+}
+
+// ─── REVIEWS ──────────────────────────────────────────────────────────────────
+
+export interface ReviewWithRelations {
+  id: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  photos: string[];
+  isVerifiedPurchase: boolean;
+  productId: string;
+  customerId: string;
+  orderId: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  customer: {
+    name: string | null;
+    image: string | null;
+  };
+  reply: {
+    id: string;
+    body: string;
+    createdAt: Date | string;
+  } | null;
+  _count?: {
+    votes: number;
+  };
+}
+
+export interface ReviewSummaryData {
+  reviews: ReviewWithRelations[];
+  total: number;
+  averageRating: number;
+  ratingBreakdown: Record<number, number>;
 }

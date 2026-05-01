@@ -13,6 +13,8 @@ import ProductInfo from "@/components/store/product-info";
 import RecentlyViewed from "@/components/store/recently-viewed";
 import Script from "next/script";
 import { ProductWithRelationsSerialized } from "@/types";
+import { auth } from "@/auth";
+import { ReviewsSection } from "@/components/store/reviews-section";
 
 export const revalidate = 60;
 
@@ -68,13 +70,57 @@ export default async function ProductDetailPage({ params }: Props) {
         category: true,
         images: { orderBy: { sortOrder: "asc" } },
         variants: { where: { isActive: true } },
-        // reviews relation included but empty until Stage 6
       },
     }),
     prisma.storeSettings.findFirst({ select: { storeName: true } }),
+    auth(),
   ]);
 
   if (!product) notFound();
+
+  // Fetch review summary data server-side
+  const [reviewGroups, totalReviews] = await Promise.all([
+    prisma.review.groupBy({
+      by: ["rating"],
+      where: { productId: product.id },
+      _count: { rating: true },
+    }),
+    prisma.review.count({
+      where: { productId: product.id },
+    }),
+  ]);
+
+  const ratingBreakdown: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let totalRatingPoints = 0;
+  reviewGroups.forEach((group) => {
+    ratingBreakdown[group.rating] = group._count.rating;
+    totalRatingPoints += group.rating * group._count.rating;
+  });
+  const averageRating = totalReviews > 0 ? totalRatingPoints / totalReviews : 0;
+
+  // Check eligibility for writing a review
+  let isEligible = false;
+  if (session?.user?.id) {
+    const [hasDeliveredOrder, hasAlreadyReviewed] = await Promise.all([
+      prisma.order.findFirst({
+        where: {
+          customerId: session.user.id,
+          status: "DELIVERED",
+          items: { some: { productId: product.id } },
+        },
+      }),
+      prisma.review.findUnique({
+        where: {
+          productId_customerId: {
+            productId: product.id,
+            customerId: session.user.id,
+          },
+        },
+      }),
+    ]);
+
+    isEligible = !!hasDeliveredOrder && !hasAlreadyReviewed;
+  }
 
   // Fetch related products (same category, different ID)
   const related = product.categoryId
@@ -87,6 +133,7 @@ export default async function ProductDetailPage({ params }: Props) {
         include: {
           category: { select: { name: true, slug: true } },
           images: { orderBy: { sortOrder: "asc" }, take: 1 },
+          reviews: { select: { rating: true } },
         },
         orderBy: { createdAt: "desc" },
         take: 4,
@@ -221,19 +268,26 @@ export default async function ProductDetailPage({ params }: Props) {
                   isOnSale={p.isOnSale}
                   isFeatured={p.isFeatured}
                   createdAt={p.createdAt.toISOString()}
+                  reviewCount={p.reviews.length}
+                  rating={p.reviews.length > 0 ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / p.reviews.length : 0}
                 />
               ))}
             </div>
           </section>
         )}
 
-        {/* ─── REVIEWS PLACEHOLDER ──────────────────────────────────────── */}
-        <section className="flex flex-col gap-6 py-8 border-t border-border">
-          <h2 className="text-2xl font-bold text-foreground">Customer Reviews</h2>
-          <div className="p-8 rounded-3xl bg-muted/50 border border-border flex flex-col items-center justify-center text-center gap-3">
-            <p className="text-muted-foreground">No reviews yet.</p>
-            <p className="font-medium">Be the first to review this product!</p>
-          </div>
+        {/* ─── REVIEWS SECTION ───────────────────────────────────────────── */}
+        <section className="py-8 border-t border-border">
+          <ReviewsSection
+            productId={product.id}
+            productSlug={product.slug}
+            isEligible={isEligible}
+            initialData={{
+              averageRating,
+              totalReviews,
+              ratingBreakdown,
+            }}
+          />
         </section>
 
         {/* ─── RECENTLY VIEWED ──────────────────────────────────────────── */}

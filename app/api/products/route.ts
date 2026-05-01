@@ -13,7 +13,7 @@ const SORT_MAP: Record<string, Prisma.ProductOrderByWithRelationInput> = {
   price_asc: { price: "asc" },
   price_desc: { price: "desc" },
   best_selling: { createdAt: "desc" },  // placeholder until orders exist
-  most_reviewed: { createdAt: "desc" }, // placeholder until reviews exist
+  most_reviewed: { reviews: { _count: "desc" } },
 };
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -82,6 +82,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
               isActive: true,
             },
           },
+          reviews: {
+            select: {
+              rating: true,
+            },
+          },
         },
       }),
     ]);
@@ -118,6 +123,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         sku: v.sku,
         isActive: v.isActive,
       })),
+      reviewCount: p.reviews.length,
+      rating: p.reviews.length > 0 
+        ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / p.reviews.length 
+        : 0,
     }));
 
     const response: ProductsApiResponse = {

@@ -123,6 +123,8 @@ export default function ProductGrid({ defaultCategory, defaultQ }: ProductGridPr
             isFeatured={p.isFeatured}
             stockQuantity={p.stockQuantity}
             createdAt={p.createdAt}
+            rating={p.rating}
+            reviewCount={p.reviewCount}
             priority={index < 4}
           />
         ))}
