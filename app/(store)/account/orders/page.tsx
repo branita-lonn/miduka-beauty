@@ -59,8 +59,8 @@ export default async function OrdersPage() {
               When you place an order, it will appear here.
             </p>
           </div>
-          <Button asChild className="rounded-2xl shadow-md">
-            <Link href="/products">Start Shopping</Link>
+          <Button render={<Link href="/products" />} className="rounded-2xl shadow-md">
+            Start Shopping
           </Button>
         </div>
       ) : (
@@ -102,11 +102,9 @@ export default async function OrdersPage() {
                     {formatCurrency(Number(order.total))}
                   </span>
                 </div>
-                <Button variant="ghost" size="icon" asChild className="rounded-full shrink-0">
-                  <Link href={`/account/orders/${order.id}`}>
-                    <ChevronRight className="w-5 h-5" />
-                    <span className="sr-only">View details</span>
-                  </Link>
+                <Button variant="ghost" size="icon" render={<Link href={`/account/orders/${order.id}`} />} className="rounded-full shrink-0">
+                  <ChevronRight className="w-5 h-5" />
+                  <span className="sr-only">View details</span>
                 </Button>
               </div>
             </div>

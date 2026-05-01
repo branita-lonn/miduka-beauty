@@ -84,11 +84,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Button variant="ghost" size="sm" asChild className="w-fit -ml-2 rounded-xl">
-          <Link href="/account/orders" className="gap-2">
-            <ChevronLeft className="w-4 h-4" />
-            Back to Orders
-          </Link>
+        <Button variant="ghost" size="sm" render={<Link href="/account/orders" />} className="w-fit -ml-2 rounded-xl">
+          <ChevronLeft className="w-4 h-4" />
+          Back to Orders
         </Button>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">

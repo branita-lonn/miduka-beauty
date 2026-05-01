@@ -93,8 +93,8 @@ export default function WishlistPage() {
               Start browsing to save items you love.
             </p>
           </div>
-          <Button asChild className="rounded-2xl shadow-md">
-            <Link href="/products">Browse Products</Link>
+          <Button render={<Link href="/products" />} className="rounded-2xl shadow-md">
+            Browse Products
           </Button>
         </div>
       ) : (

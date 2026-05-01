@@ -81,7 +81,7 @@ export default function StoreHeader({ storeName, logoUrl, user }: StoreHeaderPro
                   <DropdownMenuLabel>{user.name || user.email || "My Account"}</DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                {user.role === "ADMIN" && (
+                {user.role === "STORE_OWNER" && (
                   <DropdownMenuItem asChild>
                     <Link href="/admin">Seller Dashboard</Link>
                   </DropdownMenuItem>

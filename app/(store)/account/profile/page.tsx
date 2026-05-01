@@ -25,7 +25,7 @@ import { toast } from "sonner";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name is required"),
-  email: z.string().email().disabled(),
+  email: z.string().email(),
   phone: z.string().min(10, "Valid phone number is required").optional().or(z.literal("")),
 });
 

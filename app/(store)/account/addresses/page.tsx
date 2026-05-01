@@ -143,11 +143,9 @@ export default function AddressesPage() {
           setIsDialogOpen(open);
           if (!open) setEditingAddress(null);
         }}>
-          <DialogTrigger asChild>
-            <Button className="rounded-2xl gap-2 shadow-md">
-              <Plus className="w-4 h-4" />
-              Add New Address
-            </Button>
+          <DialogTrigger render={<Button className="rounded-2xl gap-2 shadow-md" />}>
+            <Plus className="w-4 h-4" />
+            Add New Address
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px] rounded-3xl">
             <DialogHeader>
@@ -222,10 +220,8 @@ export default function AddressesPage() {
                     </Button>
                   )}
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full" />}>
+                      <MoreVertical className="w-4 h-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-2xl">
                       <DropdownMenuItem 
