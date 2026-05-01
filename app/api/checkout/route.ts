@@ -9,6 +9,7 @@ import { getOrCreateCart } from "@/lib/cart";
 import { initiateStkPush, formatPhoneNumber } from "@/lib/mpesa";
 import { z } from "zod";
 import { OrderStatus, PaymentStatus, PaymentMethod } from "@prisma/client";
+import { emitNewOrder } from "@/lib/socket";
 
 const SESSION_COOKIE = "miduka_session_id";
 
@@ -187,6 +188,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
 
       return newOrder;
+    });
+
+    // 4.5. Notify Store Owners via Socket.io
+    emitNewOrder({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      total: Number(order.total),
+      customerName: fullName,
     });
 
     // 5. Trigger Payment Integrations

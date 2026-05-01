@@ -8,6 +8,7 @@ import Link from "next/link";
 import { LayoutDashboard, Package, Tags, ShoppingCart, Users, BarChart, Settings, Menu, MessageSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { OrderNotificationListener } from "@/components/dashboard/order-notification-listener";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -65,6 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-screen bg-background">
+      <OrderNotificationListener />
       {/* Desktop Sidebar */}
       <aside className="hidden w-64 border-r border-border bg-card md:block">
         <SidebarContent storeName={storeName} />
