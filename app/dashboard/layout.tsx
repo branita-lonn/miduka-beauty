@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { LayoutDashboard, Package, Tags, ShoppingCart, Users, BarChart, Settings, Menu } from "lucide-react";
+import { LayoutDashboard, Package, Tags, ShoppingCart, Users, BarChart, Settings, Menu, MessageSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +16,7 @@ const navLinks = [
   { href: "/dashboard/orders", label: "Orders", icon: ShoppingCart },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart },
+  { href: "/dashboard/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/dashboard/settings", label: "Store Settings", icon: Settings },
 ];
 
