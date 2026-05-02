@@ -10,6 +10,8 @@ import RecentlyViewed from "@/components/store/recently-viewed";
 import ProductRecommendations from "@/components/store/product-recommendations";
 import Script from "next/script";
 import { ReviewsSection } from "@/components/store/reviews-section";
+import { ProductSchema } from "@/components/seo/product-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { ProductWithRelationsSerialized } from "@/types";
 import { auth } from "@/auth";
 import { getBundlesForProduct } from "@/lib/bundles";
@@ -36,13 +38,27 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     };
   }
 
+  const description = product.description
+    ? product.description.replace(/[#*_~`\[\]()]/g, '').substring(0, 155)
+    : `Buy ${product.name} at MiDuka.`;
+
+  const imageUrl = product.images[0]?.url;
+
   return {
-    title: `${product.name} | MiDuka`,
-    description: product.description || `Buy ${product.name} at MiDuka.`,
+    title: product.name,
+    description,
+    alternates: {
+      canonical: `/products/${product.slug}`,
+    },
     openGraph: {
       title: product.name,
-      description: product.description || undefined,
-      images: product.images.map((img) => img.url),
+      description,
+      type: "article",
+      images: imageUrl ? [imageUrl] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: imageUrl ? [imageUrl] : undefined,
     },
   };
 }
@@ -123,36 +139,23 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const priceNum = Number(product.price);
   const isOutOfStock = product.stockQuantity === 0 && (product.variants.length === 0 || product.variants.reduce((acc, v) => acc + v.stockQuantity, 0) === 0);
 
-  // Build JSON-LD
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description,
-    image: product.images.map(img => img.url),
-    sku: product.slug,
-    brand: {
-      "@type": "Brand",
-      name: "MiDuka",
-    },
-    offers: {
-      "@type": "Offer",
-      url: `${process.env.NEXT_PUBLIC_APP_URL}/products/${product.slug}`,
-      priceCurrency: "KES",
-      price: priceNum,
-      availability: isOutOfStock 
-        ? "https://schema.org/OutOfStock" 
-        : "https://schema.org/InStock",
-    },
-  };
+  // SEO Schemas
+  const breadcrumbItems = [
+    { name: "Store", url: "/" },
+    ...(product.category ? [{ name: product.category.name, url: `/categories/${product.category.slug}` }] : []),
+    { name: product.name, url: `/products/${product.slug}` }
+  ];
 
   return (
     <>
-      <Script
-        id="json-ld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <ProductSchema 
+        product={serializedProduct as any}
+        aggregateRating={{
+          ratingValue: avgRating._avg.rating || 0,
+          reviewCount: totalReviews
+        }}
       />
+      <BreadcrumbSchema items={breadcrumbItems} />
       <div className="container mx-auto px-4 py-8 flex flex-col gap-16">
         {/* Breadcrumbs */}
         <nav aria-label="breadcrumb" className="text-sm text-muted-foreground flex items-center gap-2">

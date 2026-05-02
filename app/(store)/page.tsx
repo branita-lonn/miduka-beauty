@@ -6,9 +6,20 @@ import ProductCard from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
 import type { Prisma } from "@prisma/client";
 import HomepageSection from "@/components/store/homepage-section";
+import type { Metadata } from "next";
 
 export const revalidate = 60;
 
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await prisma.storeSettings.findFirst();
+  return {
+    title: settings?.storeName || "MiDuka",
+    description: settings?.storeTagline || "Your neighbourhood store, online.",
+    openGraph: {
+      images: [settings?.heroImageUrl || settings?.storeLogoUrl || "/icons/icon-512.png"],
+    },
+  };
+}
 // ─── Serialization helper ──────────────────────────────────────────────────
 type RawProduct = Prisma.ProductGetPayload<{
   include: {

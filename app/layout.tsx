@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import Script from "next/script";
 import { PwaInstallPrompt } from "@/components/store/pwa-install-prompt";
+import { OrganizationSchema } from "@/components/seo/organization-schema";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -13,22 +14,50 @@ const poppins = Poppins({ weight: ["400", "500", "600", "700"], subsets: ["latin
 const lato = Lato({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-lato" });
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito" });
 
-export const metadata: Metadata = {
-  title: "MiDuka",
-  description: "Your neighbourhood store, online.",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "MiDuka",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  icons: {
-    apple: "/icons/icon-192.png",
-  },
-};
+import { prisma } from "@/lib/prisma";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await prisma.storeSettings.findFirst();
+  const storeName = settings?.storeName || "MiDuka";
+  const tagline = settings?.heroSubtitle || "Your neighbourhood store, online.";
+
+  return {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+    title: {
+      default: storeName,
+      template: `%s | ${storeName}`,
+    },
+    description: tagline,
+    openGraph: {
+      type: "website",
+      siteName: storeName,
+      locale: "en_KE",
+      images: [settings?.storeLogoUrl || "/icons/icon-512.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: storeName,
+      description: tagline,
+      images: [settings?.storeLogoUrl || "/icons/icon-512.png"],
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: storeName,
+    },
+    formatDetection: {
+      telephone: false,
+    },
+    icons: {
+      apple: "/icons/icon-192.png",
+    },
+  };
+}
 
 export const viewport = {
   themeColor: "#3B82F6",
@@ -37,11 +66,13 @@ export const viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await prisma.storeSettings.findFirst();
+
   return (
     <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head>
@@ -59,6 +90,15 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${poppins.variable} ${lato.variable} ${nunito.variable} bg-background text-foreground`}>
         <SessionProvider>
+          <OrganizationSchema 
+            storeName={settings?.storeName}
+            storeTagline={settings?.storeTagline || settings?.heroSubtitle || undefined}
+            storeLogoUrl={settings?.storeLogoUrl}
+            whatsappNumber={settings?.whatsappNumber}
+            facebookUrl={settings?.facebookUrl}
+            instagramUrl={settings?.instagramUrl}
+            twitterUrl={settings?.twitterUrl}
+          />
           {children}
           <Toaster position="bottom-right" />
           <PwaInstallPrompt />

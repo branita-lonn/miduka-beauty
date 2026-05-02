@@ -10,6 +10,7 @@ import ProductSort from "@/components/store/product-sort";
 import ProductGrid from "@/components/store/product-grid";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 
 export const revalidate = 60;
 
@@ -23,10 +24,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     where: { slug },
     select: { name: true, description: true },
   });
+  
   if (!category) return {};
+  
+  const settings = await prisma.storeSettings.findFirst();
+  const storeName = settings?.storeName || "MiDuka";
+
   return {
-    title: `${category.name} | MiDuka`,
-    description: category.description ?? `Shop ${category.name} at MiDuka.`,
+    title: `${category.name} — Browse ${storeName}`,
+    description: `Shop ${category.name.toLowerCase()} at ${storeName}. Free delivery available on qualifying orders.`,
+    alternates: {
+      canonical: `/categories/${slug}`,
+    },
+    openGraph: {
+      title: category.name,
+      images: settings?.storeLogoUrl ? [settings.storeLogoUrl] : undefined,
+    },
   };
 }
 
@@ -60,9 +73,17 @@ export default async function CategoryPage({ params }: Props) {
   const sizes = distinctSizes.map((v) => v.size!).filter(Boolean).sort();
   const colours = distinctColours.map((v) => v.colour!).filter(Boolean).sort();
 
+  const breadcrumbItems = [
+    { name: "Store", url: "/" },
+    { name: "Categories", url: "/categories" },
+    { name: category.name, url: `/categories/${category.slug}` }
+  ];
+
   return (
-    <div className="container mx-auto px-4 py-10 flex flex-col gap-8">
-      {/* Header */}
+    <>
+      <BreadcrumbSchema items={breadcrumbItems} />
+      <div className="container mx-auto px-4 py-10 flex flex-col gap-8">
+        {/* Header */}
       <div>
         <nav aria-label="breadcrumb" className="text-sm text-muted-foreground mb-2">
           <Link href="/categories" className="hover:text-foreground transition-colors">
@@ -119,5 +140,6 @@ export default async function CategoryPage({ params }: Props) {
         </div>
       </div>
     </div>
+    </>
   );
 }
