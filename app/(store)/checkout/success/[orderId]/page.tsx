@@ -9,6 +9,15 @@ import { CheckCircle2, Package, MapPin, CreditCard, ChevronRight } from "lucide-
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { sendWhatsAppOrderConfirmation } from "@/lib/whatsapp";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Order Confirmed | MiDuka",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function CheckoutSuccessPage({
   params,

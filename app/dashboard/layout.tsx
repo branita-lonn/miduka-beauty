@@ -9,6 +9,17 @@ import { LayoutDashboard, Package, Tags, ShoppingCart, Users, BarChart, Settings
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { OrderNotificationListener } from "@/components/dashboard/order-notification-listener";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s | Dashboard",
+    default: "Seller Dashboard",
+  },
+  robots: {
+    index: false,
+  },
+};
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

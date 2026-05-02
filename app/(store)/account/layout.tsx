@@ -1,41 +1,16 @@
-// app/(store)/account/layout.tsx
-// Account layout — session protection and shared navigation for customer dashboard
+// file: app/(store)/account/layout.tsx
+// purpose: Provide SEO metadata for the account route to prevent indexing
 
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import AccountSidebar from "@/components/store/account-sidebar";
+import { Metadata } from "next";
 
-export default async function AccountLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const session = await auth();
+export const metadata: Metadata = {
+  title: "My Account | MiDuka",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
-  if (!session?.user) {
-    redirect("/auth/login?redirect=/account/orders");
-  }
-
-  const customer = {
-    name: session.user.name || null,
-    email: session.user.email || null,
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Desktop Sidebar / Mobile Nav Header */}
-        <aside className="w-full md:w-72 flex-shrink-0">
-          <AccountSidebar customer={customer} />
-        </aside>
-
-        {/* Main Content Area */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-card border rounded-3xl p-6 md:p-8 shadow-sm min-h-[500px]">
-            {children}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+export default function AccountLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }
