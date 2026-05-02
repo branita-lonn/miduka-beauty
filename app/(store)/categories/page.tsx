@@ -55,7 +55,7 @@ export default async function CategoriesPage() {
                     fill
                     sizes="80px"
                     priority={index < 4}
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    {...(cat.imageBlurDataUrl ? { placeholder: "blur", blurDataURL: cat.imageBlurDataUrl } : {})}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />

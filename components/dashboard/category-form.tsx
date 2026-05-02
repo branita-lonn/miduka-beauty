@@ -35,6 +35,7 @@ const formSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   imageUrl: z.string().optional(),
+  imageBlurDataUrl: z.string().optional().nullable(),
   parentId: z.string().optional().nullable(),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.boolean().default(true),
@@ -60,6 +61,7 @@ export function CategoryForm({ initialData, categories, onSuccess }: CategoryFor
           slug: initialData.slug,
           description: initialData.description || "",
           imageUrl: initialData.imageUrl || "",
+          imageBlurDataUrl: initialData.imageBlurDataUrl || "",
           parentId: initialData.parentId,
           sortOrder: initialData.sortOrder,
           isActive: initialData.isActive,
@@ -69,6 +71,7 @@ export function CategoryForm({ initialData, categories, onSuccess }: CategoryFor
           slug: "",
           description: "",
           imageUrl: "",
+          imageBlurDataUrl: "",
           parentId: undefined,
           sortOrder: 0,
           isActive: true,
@@ -148,9 +151,15 @@ export function CategoryForm({ initialData, categories, onSuccess }: CategoryFor
               <FormLabel>Category Image</FormLabel>
               <FormControl>
                 <ImageUpload
-                  value={field.value ? [field.value] : []}
-                  onChange={(urls) => field.onChange(urls[0] || "")}
-                  onRemove={() => field.onChange("")}
+                  value={field.value ? [{ url: field.value, blurDataUrl: form.getValues("imageBlurDataUrl") }] : []}
+                  onChange={(images) => {
+                    field.onChange(images[0]?.url || "");
+                    form.setValue("imageBlurDataUrl", images[0]?.blurDataUrl || "");
+                  }}
+                  onRemove={() => {
+                    field.onChange("");
+                    form.setValue("imageBlurDataUrl", "");
+                  }}
                   maxImages={1}
                   folder="miduka/categories"
                 />

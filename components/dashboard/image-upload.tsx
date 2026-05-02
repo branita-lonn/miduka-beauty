@@ -19,6 +19,7 @@ import {
 interface ImageData {
   url: string;
   colour?: string | null;
+  blurDataUrl?: string | null;
 }
 
 interface ImageUploadProps {
@@ -91,7 +92,7 @@ export function ImageUpload({
         }
 
         const data = await response.json();
-        newImages.push({ url: data.url, colour: null });
+        newImages.push({ url: data.url, colour: null, blurDataUrl: data.blurDataUrl });
       }
 
       if (newImages.length > 0) {

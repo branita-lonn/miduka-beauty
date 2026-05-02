@@ -24,8 +24,8 @@ import { toast } from "sonner";
 import { Loader2, Save, Image as ImageIcon, Search, Globe } from "lucide-react";
 import { ImageUpload } from "@/components/dashboard/image-upload";
 
-const brandingSchema = z.object({
   logoUrl: z.string().optional(),
+  logoBlurDataUrl: z.string().optional().nullable(),
   faviconUrl: z.string().optional(),
   metaTitle: z.string().optional(),
   metaDescription: z.string().optional(),
@@ -44,6 +44,7 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
     resolver: zodResolver(brandingSchema),
     defaultValues: {
       logoUrl: initialData?.logoUrl || "",
+      logoBlurDataUrl: initialData?.logoBlurDataUrl || "",
       faviconUrl: initialData?.faviconUrl || "",
       metaTitle: initialData?.metaTitle || "",
       metaDescription: initialData?.metaDescription || "",
@@ -92,9 +93,15 @@ export function BrandingForm({ initialData }: BrandingFormProps) {
                     <FormItem>
                       <FormControl>
                         <ImageUpload 
-                          value={field.value ? [{ url: field.value }] : []}
-                          onChange={(images) => field.onChange(images[0]?.url || "")}
-                          onRemove={() => field.onChange("")}
+                          value={field.value ? [{ url: field.value, blurDataUrl: form.getValues("logoBlurDataUrl") }] : []}
+                          onChange={(images) => {
+                            field.onChange(images[0]?.url || "");
+                            form.setValue("logoBlurDataUrl", images[0]?.blurDataUrl || "");
+                          }}
+                          onRemove={() => {
+                            field.onChange("");
+                            form.setValue("logoBlurDataUrl", "");
+                          }}
                           maxImages={1}
                           folder="miduka/branding"
                         />

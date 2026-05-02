@@ -24,6 +24,7 @@ import {
 interface StoreHeaderProps {
   storeName: string;
   logoUrl: string | null;
+  logoBlurDataUrl?: string | null;
   user?: {
     name?: string | null;
     email?: string | null;
@@ -31,7 +32,7 @@ interface StoreHeaderProps {
   };
 }
 
-export default function StoreHeader({ storeName, logoUrl, user }: StoreHeaderProps) {
+export default function StoreHeader({ storeName, logoUrl, logoBlurDataUrl, user }: StoreHeaderProps) {
   const { itemCount, setIsOpen } = useCart();
 
   return (
@@ -51,6 +52,7 @@ export default function StoreHeader({ storeName, logoUrl, user }: StoreHeaderPro
               height={40}
               className="h-8 w-auto object-contain"
               priority
+              {...(logoBlurDataUrl ? { placeholder: "blur", blurDataURL: logoBlurDataUrl } : {})}
             />
           ) : (
             <span className="text-xl font-extrabold tracking-tight text-primary">

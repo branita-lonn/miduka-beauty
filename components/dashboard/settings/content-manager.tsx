@@ -24,10 +24,8 @@ import { Loader2, Save, Layout, ExternalLink, Image as ImageIcon } from "lucide-
 import { ImageUpload } from "@/components/dashboard/image-upload";
 import Image from "next/image";
 
-const contentSchema = z.object({
-  heroHeadline: z.string().optional(),
-  heroSubheadline: z.string().optional(),
   heroImageUrl: z.string().optional(),
+  heroBlurDataUrl: z.string().optional().nullable(),
   heroCtaText: z.string().optional(),
   heroCtaLink: z.string().optional(),
 });
@@ -47,6 +45,7 @@ export function ContentManager({ initialData }: ContentManagerProps) {
       heroHeadline: initialData?.heroHeadline || "",
       heroSubheadline: initialData?.heroSubheadline || "",
       heroImageUrl: initialData?.heroImageUrl || "",
+      heroBlurDataUrl: initialData?.heroBlurDataUrl || "",
       heroCtaText: initialData?.heroCtaText || "Shop Now",
       heroCtaLink: initialData?.heroCtaLink || "/products",
     },
@@ -158,9 +157,15 @@ export function ContentManager({ initialData }: ContentManagerProps) {
                       <FormLabel>Hero Image</FormLabel>
                       <FormControl>
                         <ImageUpload 
-                          value={field.value ? [{ url: field.value }] : []}
-                          onChange={(images) => field.onChange(images[0]?.url || "")}
-                          onRemove={() => field.onChange("")}
+                          value={field.value ? [{ url: field.value, blurDataUrl: form.getValues("heroBlurDataUrl") }] : []}
+                          onChange={(images) => {
+                            field.onChange(images[0]?.url || "");
+                            form.setValue("heroBlurDataUrl", images[0]?.blurDataUrl || "");
+                          }}
+                          onRemove={() => {
+                            field.onChange("");
+                            form.setValue("heroBlurDataUrl", "");
+                          }}
                           maxImages={1}
                           folder="miduka/branding"
                         />

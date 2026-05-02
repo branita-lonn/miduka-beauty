@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, description, imageUrl, parentId, sortOrder } = body;
+    const { name, description, imageUrl, imageBlurDataUrl, parentId, sortOrder } = body;
 
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
         slug,
         description,
         imageUrl,
+        imageBlurDataUrl,
         parentId: parentId || null,
         sortOrder: sortOrder || 0,
         isActive: true,

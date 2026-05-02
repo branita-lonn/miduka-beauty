@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { generateBlurDataUrl } from "@/lib/cloudinary-blur";
 
 interface ImportProductRow {
   name: string;
@@ -96,10 +97,11 @@ export async function POST(request: NextRequest) {
             isFeatured: row.isFeatured?.toLowerCase() === "true",
             isOnSale: row.isOnSale?.toLowerCase() === "true",
             images: {
-              create: imageUrls.map((url, idx) => ({
+              create: await Promise.all(imageUrls.map(async (url, idx) => ({
                 url,
-                sortOrder: idx
-              }))
+                sortOrder: idx,
+                blurDataUrl: await generateBlurDataUrl(url),
+              })))
             }
           }
         });

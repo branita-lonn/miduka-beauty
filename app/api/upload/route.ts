@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { uploadImage } from "@/lib/cloudinary";
+import { generateBlurDataUrl } from "@/lib/cloudinary-blur";
 
 const ALLOWED_FOLDERS = ["miduka/products", "miduka/categories", "miduka/settings", "miduka/reviews", "miduka/branding"];
 
@@ -15,6 +16,7 @@ interface UploadRequest {
 interface UploadResponse {
   url: string;
   publicId: string;
+  blurDataUrl?: string | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -46,8 +48,9 @@ export async function POST(req: NextRequest) {
     }
 
     const { url, publicId } = await uploadImage(base64, folder);
+    const blurDataUrl = await generateBlurDataUrl(url);
 
-    const response: UploadResponse = { url, publicId };
+    const response: UploadResponse = { url, publicId, blurDataUrl };
     return NextResponse.json(response, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof Error) {

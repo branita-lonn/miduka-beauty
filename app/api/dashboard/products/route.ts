@@ -102,7 +102,9 @@ export async function POST(req: NextRequest) {
         for (let i = 0; i < images.length; i++) {
           const img = images[i];
           const url = typeof img === "string" ? img : img.url;
-          const blurDataUrl = await generateBlurDataUrl(url);
+          const blurDataUrl = (typeof img === "object" && img.blurDataUrl) 
+            ? img.blurDataUrl 
+            : await generateBlurDataUrl(url);
           
           await tx.productImage.create({
             data: {

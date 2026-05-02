@@ -1,32 +1,30 @@
-// file: lib/cloudinary-blur.ts
-// purpose: Generate blurDataUrl for Cloudinary images
+// lib/cloudinary-blur.ts
+// Utility for generating base64 blur placeholders for images
 
-export async function generateBlurDataUrl(cloudinaryUrl: string): Promise<string | null> {
-  if (!cloudinaryUrl.includes('res.cloudinary.com')) {
-    return null; // Not a Cloudinary URL
-  }
+import { getPlaiceholder } from "plaiceholder";
 
-  // Insert e_blur:1000,q_1,f_auto into the transformation path
-  // Cloudinary URLs look like: https://res.cloudinary.com/<cloud_name>/image/upload/v1234567890/public_id.jpg
-  // We want: https://res.cloudinary.com/<cloud_name>/image/upload/e_blur:1000,q_1,f_auto/v1234567890/public_id.jpg
-  
-  const uploadIndex = cloudinaryUrl.indexOf('/upload/');
-  if (uploadIndex === -1) {
-    return null;
-  }
-
-  const beforeUpload = cloudinaryUrl.substring(0, uploadIndex + 8);
-  const afterUpload = cloudinaryUrl.substring(uploadIndex + 8);
-  const blurUrl = `${beforeUpload}e_blur:1000,q_1,f_auto,w_100/${afterUpload}`;
+/**
+ * Generates a base64 blurDataURL for a given image URL.
+ * Uses plaiceholder to process the image and return a small base64 string.
+ */
+export async function generateBlurDataUrl(url: string): Promise<string | null> {
+  if (!url) return null;
 
   try {
-    const response = await fetch(blurUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = response.headers.get('content-type') || 'image/jpeg';
-    return `data:${mimeType};base64,${base64}`;
+    // We need to fetch the image first because plaiceholder requires a buffer/arrayBuffer
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.warn(`[BLUR_GEN] Failed to fetch image: ${url} (${response.status})`);
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const { base64 } = await getPlaiceholder(buffer, { size: 10 });
+    
+    return base64;
   } catch (error) {
-    console.error('Failed to generate blurDataUrl:', error);
+    console.error(`[BLUR_GEN_ERROR] ${url}:`, error);
     return null;
   }
 }

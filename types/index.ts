@@ -17,6 +17,7 @@ export interface StoreSettingsData {
   storeName: string;
   storeTagline: string | null;
   logoUrl: string | null;
+  logoBlurDataUrl: string | null;
   accentColor: string;
   socialLinks: SocialLinks | null;
   returnPolicy: string | null;
@@ -24,6 +25,7 @@ export interface StoreSettingsData {
   heroHeadline: string | null;
   heroSubheadline: string | null;
   heroImageUrl: string | null;
+  heroBlurDataUrl: string | null;
   heroCtaText: string | null;
   heroCtaLink: string | null;
 }

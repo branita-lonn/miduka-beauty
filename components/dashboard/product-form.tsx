@@ -46,6 +46,7 @@ const variantSchema = z.object({
 const imageSchema = z.object({
   url: z.string(),
   colour: z.string().optional().nullable(),
+  blurDataUrl: z.string().optional().nullable(),
 });
 
 const formSchema = z.object({
@@ -95,7 +96,11 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
           isOnSale: initialData.isOnSale,
           description: initialData.description || "",
           stockQuantity: initialData.stockQuantity,
-          images: initialData.images?.map((img) => ({ url: img.url, colour: img.colour })) || [],
+          images: initialData.images?.map((img) => ({ 
+            url: img.url, 
+            colour: img.colour,
+            blurDataUrl: img.blurDataUrl 
+          })) || [],
           variants: initialData.variants?.map((v) => ({
             id: v.id,
             colour: v.colour || "",

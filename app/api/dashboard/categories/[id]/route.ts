@@ -18,7 +18,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await req.json();
-    const { name, description, imageUrl, parentId, sortOrder, isActive, slug: providedSlug } = body;
+    const { name, description, imageUrl, imageBlurDataUrl, parentId, sortOrder, isActive, slug: providedSlug } = body;
 
     const existingCategory = await prisma.category.findUnique({
       where: { id: categoryId },
@@ -53,6 +53,7 @@ export async function PUT(
         slug: updatedSlug,
         description,
         imageUrl,
+        imageBlurDataUrl,
         parentId: parentId || null,
         sortOrder: sortOrder || 0,
         isActive: isActive !== undefined ? isActive : existingCategory.isActive,

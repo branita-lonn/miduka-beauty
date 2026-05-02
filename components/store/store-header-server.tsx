@@ -10,6 +10,7 @@ export default async function StoreHeaderServer() {
     select: {
       storeName: true,
       logoUrl: true,
+      logoBlurDataUrl: true,
     },
   });
 
@@ -19,6 +20,7 @@ export default async function StoreHeaderServer() {
     <StoreHeader
       storeName={settings?.storeName ?? "MiDuka"}
       logoUrl={settings?.logoUrl ?? null}
+      logoBlurDataUrl={settings?.logoBlurDataUrl ?? null}
       user={session?.user}
     />
   );

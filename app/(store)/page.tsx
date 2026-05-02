@@ -132,6 +132,7 @@ export default async function HomePage() {
               priority
               className="object-cover"
               sizes="100vw"
+              {...(settings.heroBlurDataUrl ? { placeholder: "blur", blurDataURL: settings.heroBlurDataUrl } : {})}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/40 to-transparent" />
             <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-20 gap-4 max-w-2xl">
@@ -225,6 +226,7 @@ export default async function HomePage() {
                         fill
                         sizes="64px"
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        {...(cat.imageBlurDataUrl ? { placeholder: "blur", blurDataURL: cat.imageBlurDataUrl } : {})}
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
