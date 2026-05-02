@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Tags, ShoppingCart, Users, BarChart, Settings, MessageSquare, Zap, Gift, Boxes } from "lucide-react";
+import { LayoutDashboard, Package, Tags, ShoppingCart, Users, BarChart, Settings, MessageSquare, Zap, Gift, Boxes, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -18,6 +18,7 @@ const navLinks = [
   { href: "/dashboard/gift-cards", label: "Gift Cards", icon: Gift },
   { href: "/dashboard/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/dashboard/settings", label: "Store Settings", icon: Settings },
+  { href: "/dashboard/delivery-zones", label: "Delivery Zones", icon: Truck },
 ];
 
 export function DashboardSidebar({ storeName, onNavClick }: { storeName: string, onNavClick?: () => void }) {
