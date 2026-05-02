@@ -30,6 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const settings = await prisma.storeSettings.findFirst();
   const storeName = settings?.storeName || "MiDuka";
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const ogImageUrl = `${appUrl}/api/og?title=${encodeURIComponent(category.name)}&subtitle=${encodeURIComponent("Category")}${settings?.storeLogoUrl ? `&image=${encodeURIComponent(settings.storeLogoUrl)}` : ""}`;
+
   return {
     title: `${category.name} — Browse ${storeName}`,
     description: `Shop ${category.name.toLowerCase()} at ${storeName}. Free delivery available on qualifying orders.`,
@@ -38,7 +41,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     openGraph: {
       title: category.name,
-      images: settings?.storeLogoUrl ? [settings.storeLogoUrl] : undefined,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: category.name,
+        }
+      ],
     },
   };
 }

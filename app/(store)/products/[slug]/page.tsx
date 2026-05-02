@@ -44,6 +44,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const imageUrl = product.images[0]?.url;
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const ogImageUrl = `${appUrl}/api/og?title=${encodeURIComponent(product.name)}&subtitle=${encodeURIComponent(product.category?.name || "Product")}${imageUrl ? `&image=${encodeURIComponent(imageUrl)}` : ""}`;
+
   return {
     title: product.name,
     description,
@@ -54,11 +57,18 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       title: product.name,
       description,
       type: "article",
-      images: imageUrl ? [imageUrl] : undefined,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        }
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      images: imageUrl ? [imageUrl] : undefined,
+      images: [ogImageUrl],
     },
   };
 }

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import Script from "next/script";
 import { PwaInstallPrompt } from "@/components/store/pwa-install-prompt";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
+import { Analytics } from "@vercel/analytics/react";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -103,6 +104,7 @@ export default async function RootLayout({
           <Toaster position="bottom-right" />
           <PwaInstallPrompt />
         </SessionProvider>
+        <Analytics />
       </body>
     </html>
   );
