@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export const revalidate = 3600; // ISR: 1 hour
 

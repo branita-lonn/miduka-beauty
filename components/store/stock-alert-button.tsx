@@ -86,8 +86,8 @@ export default function StockAlertButton({
           variant="outline"
           className="w-full rounded-2xl gap-2 h-12 border-primary/30 text-primary hover:bg-primary/5 transition-all duration-300"
         >
+          {/* A11Y: Added role and label to spinner */}
           {loading ? (
-            {/* A11Y: Added role and label to spinner */}
             <Loader2 className="w-4 h-4 animate-spin" role="status" aria-label="Loading" />
           ) : (
             <Bell className="w-4 h-4" />
@@ -114,9 +114,9 @@ export default function StockAlertButton({
               size="icon"
               className="rounded-xl shrink-0 h-10 w-10 shadow-sm"
             >
+              {/* A11Y: Added role and label to spinner */}
               {loading ? (
-                {/* A11Y: Added role and label to spinner */}
-            <Loader2 className="w-4 h-4 animate-spin" role="status" aria-label="Loading" />
+                <Loader2 className="w-4 h-4 animate-spin" role="status" aria-label="Loading" />
               ) : (
                 <Send className="w-4 h-4" />
               )}

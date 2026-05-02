@@ -241,8 +241,10 @@ export function ReviewForm({ productId, onSuccess, onCancel, initialData }: Revi
             {photos.length < 5 && (
               <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-border/60 rounded-2xl cursor-pointer hover:bg-muted/50 transition-colors">
                 {isUploading ? (
-                  {/* A11Y: Added role and label to spinner */}
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" role="status" aria-label="Loading" />
+                  <>
+                    {/* A11Y: Added role and label to spinner */}
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" role="status" aria-label="Loading" />
+                  </>
                 ) : (
                   <>
                     <Upload className="h-5 w-5 text-muted-foreground" />

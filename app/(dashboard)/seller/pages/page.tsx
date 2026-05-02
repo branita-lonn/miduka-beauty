@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import EditorClient from "./client";
 
 export default async function PagesEditor() {

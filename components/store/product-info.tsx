@@ -280,11 +280,11 @@ export default function ProductInfo({
         <p className="text-sm font-medium">Quantity</p>
         <div className="flex items-center gap-3">
           <div className="flex items-center rounded-2xl border border-border overflow-hidden">
+            {/* A11Y: Min touch target 44px */}
             <button
               aria-label="Decrease quantity"
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
               disabled={quantity <= 1}
-              {/* A11Y: Min touch target 44px */}
               className="h-11 w-11 flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors disabled:opacity-40"
             >
               −
@@ -292,11 +292,11 @@ export default function ProductInfo({
             <span className="w-12 text-center text-sm font-semibold">
               {quantity}
             </span>
+            {/* A11Y: Min touch target 44px */}
             <button
               aria-label="Increase quantity"
               onClick={() => setQuantity((q) => Math.min(stockQty, q + 1))}
               disabled={quantity >= stockQty}
-              {/* A11Y: Min touch target 44px */}
               className="h-11 w-11 flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors disabled:opacity-40"
             >
               +
