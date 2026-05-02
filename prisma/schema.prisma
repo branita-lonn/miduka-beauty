@@ -600,3 +600,13 @@ model GiftCard {
 
   @@index([code])
 }
+
+// ─── STATIC PAGES ─────────────────────────────────────────────────────────────
+
+model StaticPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt
+}
