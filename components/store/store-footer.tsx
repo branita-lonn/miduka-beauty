@@ -116,11 +116,23 @@ export default async function StoreFooter() {
             <Link href="/search" className="text-muted-foreground hover:text-foreground transition-colors">
               Search
             </Link>
-            {settings?.returnPolicy && (
-              <Link href="/return-policy" className="text-muted-foreground hover:text-foreground transition-colors">
-                Return Policy
-              </Link>
-            )}
+          </div>
+
+          {/* Information */}
+          <div className="flex flex-col gap-2 text-sm">
+            <span className="font-semibold text-foreground mb-1">Information</span>
+            <Link href="/about" className="text-muted-foreground hover:text-foreground transition-colors">
+              About
+            </Link>
+            <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+              Contact
+            </Link>
+            <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/returns" className="text-muted-foreground hover:text-foreground transition-colors">
+              Returns Policy
+            </Link>
           </div>
 
           {/* Business Hours */}
