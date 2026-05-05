@@ -6,7 +6,15 @@ import { auth } from "@/auth";
 import { uploadImage } from "@/lib/cloudinary";
 import { generateBlurDataUrl } from "@/lib/cloudinary-blur";
 
-const ALLOWED_FOLDERS = ["miduka/products", "miduka/categories", "miduka/settings", "miduka/reviews", "miduka/branding"];
+const ALLOWED_FOLDERS = [
+  "miduka/products", 
+  "miduka/categories", 
+  "miduka/settings", 
+  "miduka/reviews", 
+  "miduka/branding",
+  "miduka/hero/desktop",
+  "miduka/hero/mobile"
+];
 
 interface UploadRequest {
   base64: string;

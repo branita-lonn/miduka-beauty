@@ -2,12 +2,12 @@
 // Skeleton for the homepage while server data loads
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { HeroSkeleton } from "@/components/store/hero-skeleton";
 
 export default function StoreLoading() {
   return (
-    <div className="flex flex-col gap-12">
-      {/* Hero skeleton */}
-      <Skeleton className="w-full h-[400px] md:h-[480px] rounded-none" />
+    <div className="flex flex-col gap-12 pb-16">
+      <HeroSkeleton />
 
       <div className="container mx-auto px-4 flex flex-col gap-12">
         {/* Product grid sections */}

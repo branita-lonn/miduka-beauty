@@ -208,3 +208,40 @@ export interface ReviewSummaryData {
   averageRating: number;
   ratingBreakdown: Record<number, number>;
 }
+
+// ─── HERO CAROUSEL ────────────────────────────────────────────────────────────
+
+export interface HeroSlideData {
+  id: string
+  headline: string | null
+  subheadline: string | null
+  ctaText: string | null
+  ctaLink: string | null
+  desktopImageUrl: string
+  mobileImageUrl: string
+  desktopPublicId: string | null
+  mobilePublicId: string | null
+  sortOrder: number
+  isActive: boolean
+  overlayColor: string | null
+  textAlign: string | null
+  duration: number | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface HeroSlideFormValues {
+  headline: string
+  subheadline: string
+  ctaText: string
+  ctaLink: string
+  desktopImageUrl: string
+  mobileImageUrl: string
+  desktopPublicId: string
+  mobilePublicId: string
+  overlayColor: string
+  textAlign: "left" | "center" | "right"
+  duration: number | null
+  isActive: boolean
+  sortOrder: number
+}

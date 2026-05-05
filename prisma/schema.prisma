@@ -160,6 +160,11 @@ model StoreSettings {
   heroCtaText     String?
   heroCtaLink     String?
   
+  // Global carousel auto-advance interval in milliseconds (default 5s)
+  heroCarouselInterval  Int     @default(5000)
+  // Whether the carousel auto-plays or requires manual interaction
+  heroCarouselAutoplay  Boolean @default(true)
+  
   // Loyalty & Marketing
   loyaltyPointsPerKes    Int      @default(1)
   loyaltyRedemptionRate Int      @default(100)
@@ -609,4 +614,44 @@ model StaticPage {
   title     String
   content   String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+model HeroSlide {
+  id               String   @id @default(cuid())
+
+  // Content
+  headline         String?
+  subheadline      String?
+  ctaText          String?
+  ctaLink          String?
+
+  // Images — two per slide for responsive display
+  desktopImageUrl  String          // Required — shown on md+ screens (≥768px)
+  mobileImageUrl   String          // Required — shown on <md screens
+
+  // Cloudinary public IDs for future deletion support
+  desktopPublicId  String?
+  mobilePublicId   String?
+
+  // Control
+  sortOrder        Int      @default(0)
+  isActive         Boolean  @default(true)
+
+  // Optional: overlay tint for text legibility over bright images
+  // Stored as a CSS rgba string, e.g. "rgba(0,0,0,0.45)"
+  overlayColor     String?  @default("rgba(0,0,0,0.35)")
+
+  // Optional: text alignment on this slide ("left" | "center" | "right")
+  textAlign        String?  @default("left")
+
+  // Optional: auto-advance duration override per slide (milliseconds)
+  // Null = use the global StoreSettings default
+  duration         Int?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+  @@map("hero_slides")
 }

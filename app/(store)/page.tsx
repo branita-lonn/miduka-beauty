@@ -6,17 +6,27 @@ import ProductCard from "@/components/store/product-card";
 import { Button } from "@/components/ui/button";
 import type { Prisma } from "@prisma/client";
 import HomepageSection from "@/components/store/homepage-section";
+import { HeroCarousel } from "@/components/store/hero-carousel";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await prisma.storeSettings.findFirst();
+  const [settings, firstSlide] = await Promise.all([
+    prisma.storeSettings.findFirst(),
+    prisma.heroSlide.findFirst({ where: { isActive: true }, orderBy: { sortOrder: "asc" } })
+  ]);
+
   return {
     title: settings?.storeName || "MiDuka",
     description: settings?.storeTagline || "Your neighbourhood store, online.",
     openGraph: {
-      images: [settings?.heroImageUrl || settings?.logoUrl || "/icons/icon-512.png"],
+      images: [
+        firstSlide?.desktopImageUrl || 
+        settings?.heroImageUrl || 
+        settings?.logoUrl || 
+        "/icons/icon-512.png"
+      ],
     },
   };
 }
@@ -66,9 +76,13 @@ export default async function HomePage() {
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
   // Fetch initial data
-  const [settings, featured, newArrivals, onSale, categories, bestSellersData] =
+  const [settings, heroSlides, featured, newArrivals, onSale, categories, bestSellersData] =
     await Promise.all([
       prisma.storeSettings.findFirst(),
+      prisma.heroSlide.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+      }),
       prisma.product.findMany({
         where: { isActive: true, isFeatured: true },
         include: PRODUCT_INCLUDE,
@@ -122,60 +136,68 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-12 pb-16">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section aria-label="Hero banner" className="relative w-full overflow-hidden">
-        {settings?.heroImageUrl ? (
-          <div className="relative h-[400px] md:h-[520px]">
-            <Image
-              src={settings.heroImageUrl}
-              alt={settings.heroHeadline ?? storeName}
-              fill
-              priority
-              className="object-cover"
-              sizes="100vw"
-              {...(settings.heroBlurDataUrl ? { placeholder: "blur", blurDataURL: settings.heroBlurDataUrl } : {})}
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/40 to-transparent" />
-            <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-20 gap-4 max-w-2xl">
-              {settings.heroHeadline && (
-                <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground leading-tight">
-                  {settings.heroHeadline}
-                </h1>
-              )}
-              {settings.heroSubheadline && (
-                <p className="text-lg text-muted-foreground">
-                  {settings.heroSubheadline}
-                </p>
-              )}
-              {settings.heroCtaText && settings.heroCtaLink && (
-                <Link href={settings.heroCtaLink}>
-                  <Button size="lg" className="rounded-full w-fit">
-                    {settings.heroCtaText}
-                  </Button>
-                </Link>
-              )}
+      {heroSlides.length > 0 ? (
+        <HeroCarousel 
+          slides={JSON.parse(JSON.stringify(heroSlides))} 
+          enableAutoplay={settings?.heroCarouselAutoplay ?? true}
+          autoplayInterval={settings?.heroCarouselInterval ?? 5000}
+        />
+      ) : (
+        <section aria-label="Hero banner" className="relative w-full overflow-hidden">
+          {settings?.heroImageUrl ? (
+            <div className="relative h-[400px] md:h-[520px]">
+              <Image
+                src={settings.heroImageUrl}
+                alt={settings.heroHeadline ?? storeName}
+                fill
+                priority
+                className="object-cover"
+                sizes="100vw"
+                {...(settings.heroBlurDataUrl ? { placeholder: "blur", blurDataURL: settings.heroBlurDataUrl } : {})}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/40 to-transparent" />
+              <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-20 gap-4 max-w-2xl">
+                {settings.heroHeadline && (
+                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground leading-tight">
+                    {settings.heroHeadline}
+                  </h1>
+                )}
+                {settings.heroSubheadline && (
+                  <p className="text-lg text-muted-foreground">
+                    {settings.heroSubheadline}
+                  </p>
+                )}
+                {settings.heroCtaText && settings.heroCtaLink && (
+                  <Link href={settings.heroCtaLink}>
+                    <Button size="lg" className="rounded-full w-fit">
+                      {settings.heroCtaText}
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Gradient fallback */
-          <div className="relative h-[400px] md:h-[520px] bg-gradient-to-br from-primary/20 via-primary/5 to-background flex flex-col items-center justify-center text-center px-6 gap-4">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full bg-primary/10 blur-3xl" />
-              <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 rounded-full bg-primary/10 blur-3xl" />
+          ) : (
+            /* Gradient fallback */
+            <div className="relative h-[400px] md:h-[520px] bg-gradient-to-br from-primary/20 via-primary/5 to-background flex flex-col items-center justify-center text-center px-6 gap-4">
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full bg-primary/10 blur-3xl" />
+                <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 rounded-full bg-primary/10 blur-3xl" />
+              </div>
+              <h1 className="relative text-5xl md:text-7xl font-extrabold tracking-tight text-foreground">
+                {settings?.heroHeadline || storeName}
+              </h1>
+              <p className="relative text-lg md:text-xl text-muted-foreground max-w-lg">
+                {settings?.heroSubheadline || tagline}
+              </p>
+              <Link href={settings?.heroCtaLink || "/categories"}>
+                <Button size="lg" className="relative rounded-full">
+                  {settings?.heroCtaText || "Shop Now"}
+                </Button>
+              </Link>
             </div>
-            <h1 className="relative text-5xl md:text-7xl font-extrabold tracking-tight text-foreground">
-              {settings?.heroHeadline || storeName}
-            </h1>
-            <p className="relative text-lg md:text-xl text-muted-foreground max-w-lg">
-              {settings?.heroSubheadline || tagline}
-            </p>
-            <Link href={settings?.heroCtaLink || "/categories"}>
-              <Button size="lg" className="relative rounded-full">
-                {settings?.heroCtaText || "Shop Now"}
-              </Button>
-            </Link>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
       <div className="container mx-auto px-4 flex flex-col gap-12">
         {/* ── Featured Products ─────────────────────────────────────────── */}

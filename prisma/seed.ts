@@ -394,6 +394,72 @@ async function main() {
   }
   console.log("Static Pages ready.");
 
+  // --- SECTION 11: Hero Slides ---
+  console.log("🖼️  Seeding hero slides...");
+
+  // Migration helper: promote existing StoreSettings hero fields → HeroSlide[0]
+  // Idempotent — only runs if no slides exist yet
+  const settings = await prisma.storeSettings.findFirst();
+  const existingSlidesCount = await prisma.heroSlide.count();
+  
+  if (settings?.heroImageUrl && existingSlidesCount === 0) {
+    await prisma.heroSlide.create({
+      data: {
+        desktopImageUrl: settings.heroImageUrl,
+        mobileImageUrl:  settings.heroImageUrl, // Same image as fallback — admin replaces later
+        headline:        settings.heroHeadline    ?? undefined,
+        subheadline:     settings.heroSubheadline ?? undefined,
+        ctaText:         settings.heroCtaText     ?? undefined,
+        ctaLink:         settings.heroCtaLink     ?? undefined,
+        overlayColor:    "rgba(0,0,0,0.35)",
+        textAlign:       "left",
+        sortOrder:       0,
+        isActive:        true,
+      },
+    });
+    console.log('[MIGRATION] Promoted heroImageUrl → HeroSlide[0]');
+  }
+
+  // Section: Hero Slides (idempotent sample data for fresh environments)
+  const sampleSlides = [
+    {
+      headline: "New Arrivals Just Dropped",
+      subheadline: "Fresh styles added weekly. Be the first to shop.",
+      ctaText: "Shop New Arrivals",
+      ctaLink: "/categories",
+      desktopImageUrl: "https://res.cloudinary.com/demo/image/upload/v1/samples/landscapes/landscape-panorama",
+      mobileImageUrl: "https://res.cloudinary.com/demo/image/upload/v1/samples/landscapes/beach-boat",
+      overlayColor: "rgba(0,0,0,0.40)",
+      textAlign: "left",
+      sortOrder: 0,
+      isActive: true,
+    },
+    {
+      headline: "Unbeatable Deals This Week",
+      subheadline: "Up to 50% off on selected items. Limited time only.",
+      ctaText: "View Offers",
+      ctaLink: "/categories",
+      desktopImageUrl: "https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/accessories-bag",
+      mobileImageUrl: "https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray",
+      overlayColor: "rgba(0,0,0,0.45)",
+      textAlign: "center",
+      sortOrder: 1,
+      isActive: true,
+    },
+  ];
+
+  for (const slide of sampleSlides) {
+    const existing = await prisma.heroSlide.findFirst({
+      where: { sortOrder: slide.sortOrder },
+    });
+    if (!existing && (await prisma.heroSlide.count()) < 8) {
+      await prisma.heroSlide.create({ data: slide as any });
+      console.log(`  ✓ Created hero slide: "${slide.headline}"`);
+    } else {
+      console.log(`  — Skipped existing hero slide at sortOrder ${slide.sortOrder}`);
+    }
+  }
+
   console.log("Seeding complete.");
 }
 
