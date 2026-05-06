@@ -205,9 +205,41 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await prisma.product.delete({
+    // Fetch images before deletion so we can clean up Cloudinary afterwards
+    const product = await prisma.product.findUnique({
       where: { id: productId },
+      include: { images: { select: { url: true } } },
     });
+
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Check for linked order items before attempting delete
+    const orderItemCount = await prisma.orderItem.count({
+      where: { productId },
+    });
+
+    if (orderItemCount > 0) {
+      return NextResponse.json(
+        {
+          error: `This product cannot be deleted because it is linked to ${orderItemCount} order${orderItemCount === 1 ? "" : "s"}. To keep your order history intact, consider deactivating it instead.`,
+          code: "PRODUCT_HAS_ORDERS",
+        },
+        { status: 409 }
+      );
+    }
+
+    // Delete product — ProductImage and ProductVariant records are cascade-deleted
+    await prisma.product.delete({ where: { id: productId } });
+
+    // Clean up Cloudinary images after DB delete (best-effort)
+    // Extract publicId from Cloudinary URL: .../upload/v<version>/<publicId>.<ext>
+    const { deleteImage } = await import("@/lib/cloudinary");
+    for (const image of product.images) {
+      const match = image.url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
+      if (match?.[1]) await deleteImage(match[1]);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

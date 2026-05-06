@@ -86,7 +86,10 @@ export function ProductsClient({ initialProducts }: { initialProducts: ProductWi
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/dashboard/products/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete product");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete product");
+      }
       toast.success("Product deleted");
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -96,7 +99,7 @@ export function ProductsClient({ initialProducts }: { initialProducts: ProductWi
       router.refresh();
     } catch (error: unknown) {
       if (error instanceof Error) {
-        toast.error(error.message);
+        toast.error(error.message, { duration: 6000 });
       } else {
         toast.error("An unknown error occurred");
       }
@@ -107,11 +110,29 @@ export function ProductsClient({ initialProducts }: { initialProducts: ProductWi
     if (selectedIds.size === 0) return;
     setIsDeletingBulk(true);
     try {
-      const promises = Array.from(selectedIds).map((id) =>
-        fetch(`/api/dashboard/products/${id}`, { method: "DELETE" })
+      const results = await Promise.allSettled(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/dashboard/products/${id}`, { method: "DELETE" }).then(async (res) => {
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || "Failed to delete");
+            }
+            return id;
+          })
+        )
       );
-      await Promise.all(promises);
-      toast.success(`Deleted ${selectedIds.size} products`);
+
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected");
+
+      if (succeeded > 0) {
+        toast.success(`Deleted ${succeeded} product${succeeded === 1 ? "" : "s"}`);
+      }
+      if (failed.length > 0) {
+        // Show first failure reason
+        const reason = (failed[0] as PromiseRejectedResult).reason?.message;
+        toast.error(`${failed.length} product${failed.length === 1 ? "" : "s"} could not be deleted. ${reason || ""}`, { duration: 8000 });
+      }
       setSelectedIds(new Set());
       router.refresh();
     } catch (error: unknown) {
