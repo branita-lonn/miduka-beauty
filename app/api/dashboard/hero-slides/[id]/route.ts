@@ -20,7 +20,7 @@ const updateSlideSchema = z.object({
   overlayColor: z.string().optional(),
   textAlign: z.enum(["left", "center", "right"]).optional(),
   verticalAlign: z.enum(["top", "center", "bottom"]).optional(),
-  videoUrl: z.string().url().optional().nullable(),
+  videoUrl: z.union([z.string().url(), z.literal("")]).optional().nullable(),
   videoPublicId: z.string().optional().nullable(),
   duration: z.number().int().min(2000).max(15000).nullable().optional(),
   isActive: z.boolean().optional(),

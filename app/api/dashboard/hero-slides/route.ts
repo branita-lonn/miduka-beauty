@@ -19,7 +19,7 @@ const createSlideSchema = z.object({
   overlayColor: z.string().optional().default("rgba(0,0,0,0.35)"),
   textAlign: z.enum(["left", "center", "right"]).default("left"),
   verticalAlign: z.enum(["top", "center", "bottom"]).default("center"),
-  videoUrl: z.string().url().optional().nullable(),
+  videoUrl: z.union([z.string().url(), z.literal("")]).optional().nullable(),
   videoPublicId: z.string().optional().nullable(),
   duration: z.number().int().min(2000).max(15000).nullable().optional(),
   isActive: z.boolean().default(true),
