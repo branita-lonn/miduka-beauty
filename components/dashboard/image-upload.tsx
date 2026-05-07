@@ -30,6 +30,7 @@ interface ImageUploadProps {
   maxImages?: number;
   folder?: string;
   availableColours?: string[];
+  resourceType?: "image" | "video";
 }
 
 export function ImageUpload({
@@ -39,6 +40,7 @@ export function ImageUpload({
   maxImages = 8,
   folder = "miduka/products",
   availableColours = [],
+  resourceType = "image",
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -69,13 +71,20 @@ export function ImageUpload({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-          toast.error(`File ${file.name} is not a supported format.`);
+        const isImage = file.type.startsWith("image/");
+        const isVideo = file.type.startsWith("video/");
+
+        if (resourceType === "image" && !isImage) {
+          toast.error(`File ${file.name} is not an image.`);
+          continue;
+        }
+        if (resourceType === "video" && !isVideo) {
+          toast.error(`File ${file.name} is not a video.`);
           continue;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`File ${file.name} exceeds 5MB.`);
+        if (file.size > (resourceType === "video" ? 20 : 5) * 1024 * 1024) {
+          toast.error(`File ${file.name} exceeds ${resourceType === "video" ? "20MB" : "5MB"}.`);
           continue;
         }
 
@@ -84,7 +93,7 @@ export function ImageUpload({
         const response = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64, folder }),
+          body: JSON.stringify({ base64, folder, resourceType }),
         });
 
         if (!response.ok) {
@@ -100,8 +109,9 @@ export function ImageUpload({
         onChange([...value, ...newImages]);
         toast.success(`Uploaded ${newImages.length} image(s).`);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Upload error");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Upload error";
+      toast.error(message);
     } finally {
       setIsUploading(false);
       if (e.target) e.target.value = "";
@@ -181,8 +191,12 @@ export function ImageUpload({
                   </span>
                 </div>
               )}
-              <Image fill src={img.url} alt={`Upload ${index + 1}`} className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
-            </div>
+                {resourceType === "image" ? (
+                  <Image fill src={img.url} alt={`Upload ${index + 1}`} className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
+                ) : (
+                  <video src={img.url} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                )}
+              </div>
 
             {/* Colour Assignment */}
             {availableColours.length > 0 && (
@@ -222,13 +236,15 @@ export function ImageUpload({
               <div className="bg-muted p-3 rounded-full group-hover:bg-primary/10 transition-colors mb-3">
                 <Upload className="h-6 w-6" />
               </div>
-              <span className="text-sm font-semibold">Add Image</span>
-              <span className="text-[10px] mt-1 opacity-70">JPEG, PNG, WEBP up to 5MB</span>
+              <span className="text-sm font-semibold">{resourceType === "image" ? "Add Image" : "Add Video"}</span>
+              <span className="text-[10px] mt-1 opacity-70">
+                {resourceType === "image" ? "JPEG, PNG, WEBP up to 5MB" : "MP4, WEBM up to 20MB"}
+              </span>
             </div>
             <input
               type="file"
-              multiple
-              accept="image/jpeg, image/png, image/webp"
+              multiple={maxImages > 1}
+              accept={resourceType === "image" ? "image/jpeg, image/png, image/webp" : "video/mp4, video/webm, video/ogg, video/quicktime"}
               className="hidden"
               onChange={handleUpload}
               disabled={isUploading}

@@ -225,6 +225,9 @@ export interface HeroSlideData {
   isActive: boolean
   overlayColor: string | null
   textAlign: string | null
+  verticalAlign: string | null
+  videoUrl: string | null
+  videoPublicId: string | null
   duration: number | null
   createdAt: Date
   updatedAt: Date
@@ -241,6 +244,9 @@ export interface HeroSlideFormValues {
   mobilePublicId: string
   overlayColor: string
   textAlign: "left" | "center" | "right"
+  verticalAlign: "top" | "center" | "bottom"
+  videoUrl: string
+  videoPublicId: string
   duration: number | null
   isActive: boolean
   sortOrder: number

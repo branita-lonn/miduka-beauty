@@ -41,7 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUpload } from "@/components/dashboard/image-upload";
 import { HeroSlideData } from "@/types";
 import { toast } from "sonner";
-import { Loader2, Save, AlignLeft, AlignCenter, AlignRight, ImageIcon } from "lucide-react";
+import { Loader2, Save, AlignLeft, AlignCenter, AlignRight, ImageIcon, ChevronUp, ChevronDown, MoveVertical } from "lucide-react";
 import Image from "next/image";
 
 const slideSchema = z.object({
@@ -55,6 +55,9 @@ const slideSchema = z.object({
   mobilePublicId: z.string().default(""),
   overlayColor: z.string().default("rgba(0,0,0,0.35)"),
   textAlign: z.enum(["left", "center", "right"]).default("left"),
+  verticalAlign: z.enum(["top", "center", "bottom"]).default("center"),
+  videoUrl: z.string().default(""),
+  videoPublicId: z.string().default(""),
   duration: z.number().int().min(2000).max(15000).nullable().default(null),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().min(0).default(0),
@@ -81,6 +84,9 @@ function buildDefaults(slide?: HeroSlideData): SlideFormValues {
     mobilePublicId: slide?.mobilePublicId || "",
     overlayColor: slide?.overlayColor || "rgba(0,0,0,0.35)",
     textAlign: (slide?.textAlign as "left" | "center" | "right") || "left",
+    verticalAlign: (slide?.verticalAlign as "top" | "center" | "bottom") || "center",
+    videoUrl: slide?.videoUrl || "",
+    videoPublicId: slide?.videoPublicId || "",
     duration: slide?.duration ?? null,
     isActive: slide?.isActive ?? true,
     sortOrder: slide?.sortOrder ?? 0,
@@ -139,8 +145,9 @@ export function HeroSlideForm({ slide, onSuccess, onClose, open }: HeroSlideForm
       toast.success(slide ? "Slide updated." : "Slide created.");
       onSuccess();
       onClose();
-    } catch (error: any) {
-      toast.error(error.message || "Something went wrong.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Something went wrong.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -220,6 +227,36 @@ export function HeroSlideForm({ slide, onSuccess, onClose, open }: HeroSlideForm
                 />
               </div>
 
+              <FormField
+                control={form.control as any}
+                name="videoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Background Video (Optional)</FormLabel>
+                    <FormDescription>
+                      Replaces images if present. MP4, WEBM up to 20MB. Short animations only.
+                    </FormDescription>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value ? [{ url: field.value, publicId: form.getValues("videoPublicId") }] : []}
+                        onChange={(assets) => {
+                          field.onChange(assets[0]?.url || "");
+                          form.setValue("videoPublicId", assets[0]?.publicId || "");
+                        }}
+                        onRemove={() => {
+                          field.onChange("");
+                          form.setValue("videoPublicId", "");
+                        }}
+                        maxImages={1}
+                        resourceType="video"
+                        folder="miduka/hero/videos"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Content Section */}
               <FormField
                 control={form.control as any}
@@ -290,30 +327,58 @@ export function HeroSlideForm({ slide, onSuccess, onClose, open }: HeroSlideForm
               </div>
 
               {/* Design Section */}
-              <div className="grid grid-cols-2 gap-6">
-                <FormField
-                  control={form.control as any}
-                  name="textAlign"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Text Alignment</FormLabel>
-                      <FormControl>
-                        <ToggleGroup value={[field.value]} onValueChange={(val: string[]) => val[0] && field.onChange(val[0])} className="justify-start">
-                          <ToggleGroupItem value="left" aria-label="Align left" className="rounded-l-xl">
-                            <AlignLeft className="h-4 w-4" />
-                          </ToggleGroupItem>
-                          <ToggleGroupItem value="center" aria-label="Align center">
-                            <AlignCenter className="h-4 w-4" />
-                          </ToggleGroupItem>
-                          <ToggleGroupItem value="right" aria-label="Align right" className="rounded-r-xl">
-                            <AlignRight className="h-4 w-4" />
-                          </ToggleGroupItem>
-                        </ToggleGroup>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-4">
+                <FormLabel>Text Placement</FormLabel>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control as any}
+                    name="textAlign"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1.5">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase">Horizontal</span>
+                        <FormControl>
+                          <ToggleGroup value={[field.value]} onValueChange={(val: string[]) => val[0] && field.onChange(val[0])} className="justify-start">
+                            <ToggleGroupItem value="left" aria-label="Align left" className="rounded-l-xl flex-1">
+                              <AlignLeft className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="center" aria-label="Align center" className="flex-1">
+                              <AlignCenter className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="right" aria-label="Align right" className="rounded-r-xl flex-1">
+                              <AlignRight className="h-4 w-4" />
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
+                  <FormField
+                    control={form.control as any}
+                    name="verticalAlign"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1.5">
+                        <span className="text-[10px] text-muted-foreground font-medium uppercase">Vertical</span>
+                        <FormControl>
+                          <ToggleGroup value={[field.value]} onValueChange={(val: string[]) => val[0] && field.onChange(val[0])} className="justify-start">
+                            <ToggleGroupItem value="top" aria-label="Align top" className="rounded-l-xl flex-1">
+                              <ChevronUp className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="center" aria-label="Align center" className="flex-1">
+                              <MoveVertical className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="bottom" aria-label="Align bottom" className="rounded-r-xl flex-1">
+                              <ChevronDown className="h-4 w-4" />
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
                 <FormItem>
                   <FormLabel>Overlay Darkness: {overlayOpacity}%</FormLabel>
                   <FormControl>
@@ -390,16 +455,22 @@ export function HeroSlideForm({ slide, onSuccess, onClose, open }: HeroSlideForm
                   
                   <TabsContent value="desktop" className="m-0 p-0">
                     <div className="relative aspect-[16/5] bg-muted overflow-hidden">
-                      {values.desktopImageUrl ? (
+                      {values.videoUrl ? (
+                        <video src={values.videoUrl} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                      ) : values.desktopImageUrl ? (
                         <Image src={values.desktopImageUrl} alt="Desktop Preview" fill className="object-cover" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30"><ImageIcon className="h-8 w-8" /></div>
                       )}
                       <div className="absolute inset-0" style={{ backgroundColor: values.overlayColor }} />
-                      <div className={`absolute inset-0 flex flex-col justify-center p-6 text-white ${
+                      <div className={`absolute inset-0 flex flex-col p-6 text-white ${
                         values.textAlign === "left" ? "items-start text-left" : 
                         values.textAlign === "center" ? "items-center text-center" : 
                         "items-end text-right"
+                      } ${
+                        values.verticalAlign === "top" ? "justify-start pt-8" :
+                        values.verticalAlign === "center" ? "justify-center" :
+                        "justify-end pb-8"
                       }`}>
                         <h3 className="text-lg font-bold drop-shadow-md leading-tight max-w-xs">{values.headline || "Headline"}</h3>
                         <p className="text-[10px] opacity-90 drop-shadow-sm mt-1 max-w-xs">{values.subheadline || "Subheadline text"}</p>
@@ -412,16 +483,22 @@ export function HeroSlideForm({ slide, onSuccess, onClose, open }: HeroSlideForm
                   
                   <TabsContent value="mobile" className="m-0 p-0">
                     <div className="relative aspect-[4/5] bg-muted overflow-hidden max-w-[200px] mx-auto">
-                      {values.mobileImageUrl ? (
+                      {values.videoUrl ? (
+                        <video src={values.videoUrl} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                      ) : values.mobileImageUrl ? (
                         <Image src={values.mobileImageUrl} alt="Mobile Preview" fill className="object-cover" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30"><ImageIcon className="h-8 w-8" /></div>
                       )}
                       <div className="absolute inset-0" style={{ backgroundColor: values.overlayColor }} />
-                      <div className={`absolute inset-0 flex flex-col justify-center p-4 text-white ${
+                      <div className={`absolute inset-0 flex flex-col p-4 text-white ${
                         values.textAlign === "left" ? "items-start text-left" : 
                         values.textAlign === "center" ? "items-center text-center" : 
                         "items-end text-right"
+                      } ${
+                        values.verticalAlign === "top" ? "justify-start pt-4" :
+                        values.verticalAlign === "center" ? "justify-center" :
+                        "justify-end pb-4"
                       }`}>
                         <h3 className="text-sm font-bold drop-shadow-md leading-tight">{values.headline || "Headline"}</h3>
                         <p className="text-[8px] opacity-90 drop-shadow-sm mt-1">{values.subheadline || "Subheadline text"}</p>

@@ -29,8 +29,6 @@ export function HeroCarousel({
     enableAutoplay ? [Autoplay({ delay: autoplayInterval, stopOnInteraction: false })] : []
   );
 
-  const [prevBtnDisabled, setPrevBtnDisabled] = React.useState(true);
-  const [nextBtnDisabled, setNextBtnDisabled] = React.useState(true);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [scrollSnaps, setScrollSnaps] = React.useState<number[]>([]);
 
@@ -44,8 +42,6 @@ export function HeroCarousel({
 
   const onSelect = React.useCallback((emblaApi: any) => {
     setSelectedIndex(emblaApi.selectedScrollSnap());
-    setPrevBtnDisabled(!emblaApi.canScrollPrev());
-    setNextBtnDisabled(!emblaApi.canScrollNext());
   }, []);
 
   React.useEffect(() => {
@@ -68,30 +64,46 @@ export function HeroCarousel({
             <div key={slide.id} className="relative flex-[0_0_100%] min-w-0">
               {/* Aspect Ratio Container (16:6 Desktop, 4:5 Mobile) */}
               <div className="relative aspect-[4/5] md:aspect-[16/6] w-full overflow-hidden">
-                {/* Desktop Image */}
-                <div className="hidden md:block absolute inset-0">
-                  <Image
-                    src={slide.desktopImageUrl}
-                    alt={slide.headline || "Hero Slide"}
-                    fill
-                    priority={index === 0}
-                    loading={index === 0 ? "eager" : "lazy"}
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 1440px"
-                  />
-                </div>
-                {/* Mobile Image */}
-                <div className="block md:hidden absolute inset-0">
-                  <Image
-                    src={slide.mobileImageUrl}
-                    alt={slide.headline || "Hero Slide"}
-                    fill
-                    priority={index === 0}
-                    loading={index === 0 ? "eager" : "lazy"}
-                    className="object-cover"
-                    sizes="100vw"
-                  />
-                </div>
+                {/* Background Media */}
+                {slide.videoUrl ? (
+                  <div className="absolute inset-0">
+                    <video
+                      src={slide.videoUrl}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      autoPlay
+                      playsInline
+                    />
+                  </div>
+                ) : (
+                  <>
+                    {/* Desktop Image */}
+                    <div className="hidden md:block absolute inset-0">
+                      <Image
+                        src={slide.desktopImageUrl}
+                        alt={slide.headline || "Hero Slide"}
+                        fill
+                        priority={index === 0}
+                        loading={index === 0 ? "eager" : "lazy"}
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 1440px"
+                      />
+                    </div>
+                    {/* Mobile Image */}
+                    <div className="block md:hidden absolute inset-0">
+                      <Image
+                        src={slide.mobileImageUrl}
+                        alt={slide.headline || "Hero Slide"}
+                        fill
+                        priority={index === 0}
+                        loading={index === 0 ? "eager" : "lazy"}
+                        className="object-cover"
+                        sizes="100vw"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Overlay Tint */}
                 <div 
@@ -101,11 +113,16 @@ export function HeroCarousel({
 
                 {/* Content Overlay */}
                 <div className={cn(
-                  "absolute inset-0 flex flex-col justify-center p-8 md:p-20 text-white transition-all duration-700 delay-100 ease-out",
+                  "absolute inset-0 flex flex-col p-8 md:p-20 text-white transition-all duration-700 delay-100 ease-out",
                   selectedIndex === index ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+                  // Horizontal Alignment
                   slide.textAlign === "center" ? "items-center text-center" : 
                   slide.textAlign === "right" ? "items-end text-right" : 
-                  "items-start text-left"
+                  "items-start text-left",
+                  // Vertical Alignment
+                  slide.verticalAlign === "top" ? "justify-start pt-16 md:pt-32" :
+                  slide.verticalAlign === "bottom" ? "justify-end pb-16 md:pb-32" :
+                  "justify-center"
                 )}>
                   <div className="max-w-2xl space-y-4">
                     {slide.headline && (

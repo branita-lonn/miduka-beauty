@@ -19,6 +19,9 @@ const updateSlideSchema = z.object({
   mobilePublicId: z.string().optional().nullable(),
   overlayColor: z.string().optional(),
   textAlign: z.enum(["left", "center", "right"]).optional(),
+  verticalAlign: z.enum(["top", "center", "bottom"]).optional(),
+  videoUrl: z.string().url().optional().nullable(),
+  videoPublicId: z.string().optional().nullable(),
   duration: z.number().int().min(2000).max(15000).nullable().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
@@ -111,6 +114,7 @@ export async function DELETE(
     // Delete from Cloudinary after DB transaction succeeds (best-effort, won't throw)
     if (slide?.desktopPublicId) await deleteImage(slide.desktopPublicId);
     if (slide?.mobilePublicId) await deleteImage(slide.mobilePublicId);
+    if (slide?.videoPublicId) await deleteImage(slide.videoPublicId, "video");
 
     return new NextResponse(null, { status: 204 });
   } catch (error: unknown) {

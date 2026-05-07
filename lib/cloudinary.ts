@@ -22,9 +22,28 @@ export async function uploadImage(base64: string, folder: string): Promise<{ url
     };
   } catch (error: unknown) {
     if (error instanceof Error) {
-      throw new Error(`Cloudinary upload failed: ${error.message}`);
+      throw new Error(`Cloudinary image upload failed: ${error.message}`);
     }
-    throw new Error("Cloudinary upload failed with an unknown error.");
+    throw new Error("Cloudinary image upload failed with an unknown error.");
+  }
+}
+
+export async function uploadVideo(base64: string, folder: string): Promise<{ url: string; publicId: string }> {
+  try {
+    const result = await cloudinary.uploader.upload(base64, {
+      folder: folder,
+      resource_type: "video",
+    });
+
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+    };
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Cloudinary video upload failed: ${error.message}`);
+    }
+    throw new Error("Cloudinary video upload failed with an unknown error.");
   }
 }
 
@@ -32,10 +51,10 @@ export async function uploadImage(base64: string, folder: string): Promise<{ url
  * Deletes an image from Cloudinary by its public_id.
  * Silently swallows errors — a missing asset should never block a DB delete.
  */
-export async function deleteImage(publicId: string): Promise<void> {
+export async function deleteImage(publicId: string, resourceType: "image" | "video" = "image"): Promise<void> {
   try {
     if (!publicId) return;
-    await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
   } catch (error: unknown) {
     // Log but don't re-throw — Cloudinary cleanup is best-effort
     if (error instanceof Error) {

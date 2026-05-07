@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { uploadImage } from "@/lib/cloudinary";
+import { uploadImage, uploadVideo } from "@/lib/cloudinary";
 import { generateBlurDataUrl } from "@/lib/cloudinary-blur";
 
 const ALLOWED_FOLDERS = [
@@ -13,12 +13,14 @@ const ALLOWED_FOLDERS = [
   "miduka/reviews", 
   "miduka/branding",
   "miduka/hero/desktop",
-  "miduka/hero/mobile"
+  "miduka/hero/mobile",
+  "miduka/hero/videos"
 ];
 
 interface UploadRequest {
   base64: string;
   folder: string;
+  resourceType?: "image" | "video";
 }
 
 interface UploadResponse {
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as UploadRequest;
-    const { base64, folder } = body;
+    const { base64, folder, resourceType = "image" } = body;
 
     // RBAC for folders: only store owners can upload to product/category/settings folders.
     // Authenticated customers can only upload to the reviews folder.
@@ -55,8 +57,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid folder" }, { status: 400 });
     }
 
-    const { url, publicId } = await uploadImage(base64, folder);
-    const blurDataUrl = await generateBlurDataUrl(url);
+    let result;
+    if (resourceType === "video") {
+      result = await uploadVideo(base64, folder);
+    } else {
+      result = await uploadImage(base64, folder);
+    }
+
+    const { url, publicId } = result;
+    const blurDataUrl = resourceType === "image" ? await generateBlurDataUrl(url) : null;
 
     const response: UploadResponse = { url, publicId, blurDataUrl };
     return NextResponse.json(response, { status: 200 });

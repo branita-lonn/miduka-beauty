@@ -651,8 +651,13 @@ model HeroSlide {
   // Stored as a CSS rgba string, e.g. "rgba(0,0,0,0.45)"
   overlayColor     String?  @default("rgba(0,0,0,0.35)")
 
-  // Optional: text alignment on this slide ("left" | "center" | "right")
-  textAlign        String?  @default("left")
+  // Optional: text alignment on this slide
+  textAlign        String?  @default("left")   // horizontal: "left" | "center" | "right"
+  verticalAlign    String?  @default("center") // vertical: "top" | "center" | "bottom"
+
+  // Background Video support (optional)
+  videoUrl         String?  // Cloudinary video URL
+  videoPublicId    String?  // Cloudinary public ID for video
 
   // Optional: auto-advance duration override per slide (milliseconds)
   // Null = use the global StoreSettings default
