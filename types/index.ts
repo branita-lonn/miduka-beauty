@@ -31,15 +31,36 @@ export interface StoreSettingsData {
 }
 
 
+export interface AttributeDefinitionPublic {
+  id: string;
+  key: string;
+  label: string;
+  unit: string | null;
+  inputType: "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN" | "COLOR";
+  sortOrder: number;
+  isFilterable: boolean;
+  categoryId: string | null;
+  allowedValues: string[]; // value strings sorted by allowedValue.sortOrder
+}
+
+export interface VariantAttributePublic {
+  attributeDefinitionId: string;
+  key: string;
+  label: string;
+  unit: string | null;
+  inputType: "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN" | "COLOR";
+  value: string;
+}
+
 export interface ProductVariantPublic {
   id: string;
-  colour: string | null;
-  size: string | null;
-  material: string | null;
   priceOverride: number | null;
   stockQuantity: number;
   sku: string | null;
   isActive: boolean;
+  attributes: VariantAttributePublic[];
+  /** Pre-computed human-readable label, e.g. "Silver / 128GB / 8GB RAM" */
+  label: string;
 }
 
 export interface ProductPublic {
@@ -58,7 +79,15 @@ export interface ProductPublic {
   updatedAt: string;
   categoryId: string | null;
   category: { id: string; name: string; slug: string } | null;
-  images: { id: string; url: string; blurDataUrl?: string | null; altText?: string | null; colour?: string | null }[];
+  images: {
+    id: string;
+    url: string;
+    altText?: string | null;
+    blurDataUrl?: string | null;
+    sortOrder: number;
+    createdAt: string;
+    variantIds: string[];
+  }[];
   variants: ProductVariantPublic[];
   rating: number;
   reviewCount: number;
@@ -116,8 +145,25 @@ export type CategoryWithRelations = Prisma.CategoryGetPayload<typeof categoryWit
 export const productWithRelations = Prisma.validator<Prisma.ProductDefaultArgs>()({
   include: {
     category: true,
-    images: true,
-    variants: true,
+    images: {
+      include: {
+        variantLinks: {
+          include: { variant: true },
+        },
+      },
+      orderBy: { sortOrder: "asc" },
+    },
+    variants: {
+      include: {
+        attributes: {
+          include: { attributeDefinition: true },
+          orderBy: { attributeDefinition: { sortOrder: "asc" } },
+        },
+        imageLinks: {
+          include: { image: true },
+        },
+      },
+    },
     flashSale: true,
   },
 });
@@ -126,51 +172,99 @@ export type ProductWithRelations = Prisma.ProductGetPayload<typeof productWithRe
   completenessScore?: number;
 };
 
-export type ProductWithRelationsSerialized = Omit<ProductWithRelations, "price" | "compareAtPrice" | "variants" | "createdAt" | "updatedAt" | "images" | "flashSale"> & {
+export type ProductWithRelationsSerialized = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
   price: number;
   compareAtPrice: number | null;
+  tags: string[];
+  isActive: boolean;
+  isFeatured: boolean;
+  isOnSale: boolean;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  categoryId: string | null;
   createdAt: string;
   updatedAt: string;
-  images: (Omit<ProductWithRelations["images"][number], "createdAt"> & {
+  category: { id: string; name: string; slug: string } | null;
+  images: {
+    id: string;
+    url: string;
+    altText: string | null;
+    blurDataUrl: string | null;
+    sortOrder: number;
     createdAt: string;
-  })[];
-  variants: (Omit<ProductWithRelations["variants"][number], "priceOverride" | "createdAt" | "updatedAt"> & {
+    variantIds: string[]; // IDs of linked variants (derived from variantLinks)
+  }[];
+  variants: {
+    id: string;
     priceOverride: number | null;
+    stockQuantity: number;
+    lowStockThreshold: number;
+    sku: string | null;
+    isActive: boolean;
     createdAt: string;
     updatedAt: string;
-  })[];
-  flashSale: (Omit<Exclude<ProductWithRelations["flashSale"], null>, "salePrice" | "startTime" | "endTime"> & {
+    attributes: VariantAttributePublic[];
+    label: string; // pre-computed by serializeProduct()
+  }[];
+  flashSale: {
+    id: string;
     salePrice: number;
     startTime: string;
     endTime: string;
-  }) | null;
+  } | null;
+  completenessScore?: number;
 };
 
+export interface VariantAttributeInput {
+  attributeDefinitionId: string;
+  value: string;
+}
+
 export interface VariantInput {
-  id?: string;
-  colour?: string;
-  size?: string;
-  material?: string;
-  priceOverride?: number;
+  id?: string;           // present when updating an existing variant
+  priceOverride?: number | null;
   stockQuantity: number;
   sku?: string;
   isActive: boolean;
+  attributes: VariantAttributeInput[];
+}
+
+export interface ProductImageInput {
+  url: string;
+  blurDataUrl?: string | null;
+  altText?: string | null;
+  sortOrder?: number;
+  /**
+   * On product UPDATE: array of real database variant IDs.
+   * On product CREATE: use variantIndex instead (see below).
+   */
+  variantIds?: string[];
+  /**
+   * On product CREATE only: 0-based index into the variants[] array in the same request.
+   * The API resolves this to the actual created variantId inside the transaction.
+   * Use this field on creation; use variantIds on updates where real IDs exist.
+   */
+  variantIndex?: number;
 }
 
 // Ensure the form values type can be inferred or exported if needed
 // This will be expanded when we create the Zod schema
 export interface ProductFormValues {
   name: string;
-  categoryId?: string;
+  categoryId?: string | null;
   price: number;
-  compareAtPrice?: number;
+  compareAtPrice?: number | null;
   tags: string[];
   isActive: boolean;
   isFeatured: boolean;
   isOnSale: boolean;
   description?: string;
   stockQuantity: number;
-  images: string[];
+  images: ProductImageInput[];
   variants: VariantInput[];
 }
 

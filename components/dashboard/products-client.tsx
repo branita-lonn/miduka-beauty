@@ -144,13 +144,20 @@ export function ProductsClient({ initialProducts }: { initialProducts: ProductWi
 
   const getCompletenessTooltip = (p: ProductWithRelationsSerialized) => {
     const missing = [];
-    if (!p.images || p.images.length === 0) missing.push("Add an image (+25pts)");
+    if (!p.images || p.images.length === 0) missing.push("Add an image (+20pts)");
     else if (p.images.length < 3) missing.push("Add 3+ images (+10pts)");
     if (!p.description || p.description.length <= 50) missing.push("Write a longer description (+20pts)");
-    if (!p.categoryId) missing.push("Assign a category (+15pts)");
-    if ((!p.variants || p.variants.length === 0) && p.stockQuantity <= 0) missing.push("Add stock or variants (+15pts)");
+    if (!p.categoryId) missing.push("Assign a category (+10pts)");
+    if ((!p.variants || p.variants.length === 0) && p.stockQuantity <= 0) missing.push("Add stock or variants (+10pts)");
     if (Number(p.price) <= 0) missing.push("Set a price (+10pts)");
     if (!p.tags || p.tags.length === 0) missing.push("Add tags (+5pts)");
+
+    if (p.variants && p.variants.length > 0) {
+      const activeVariants = p.variants.filter((v) => v.isActive);
+      if (activeVariants.length > 0 && !activeVariants.every((v) => v.attributes && v.attributes.length > 0)) {
+        missing.push("Define attributes on active variants (+15pts)");
+      }
+    }
 
     if (missing.length === 0) return "100% Complete!";
     return missing.join(" • ");

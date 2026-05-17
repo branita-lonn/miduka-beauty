@@ -6,8 +6,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug } from "@/lib/generate-slug";
 import { computeCompleteness } from "@/lib/product-completeness";
-import { ProductWithRelations } from "@/types";
+import { ProductWithRelations, productWithRelations, VariantInput, ProductImageInput } from "@/types";
 import { generateBlurDataUrl } from "@/lib/cloudinary-blur";
+import { serializeProduct } from "@/lib/serialize-product";
 
 export async function GET(_req: NextRequest) {
   try {
@@ -18,22 +19,19 @@ export async function GET(_req: NextRequest) {
     }
 
     const products = await prisma.product.findMany({
-      include: {
-        category: true,
-        images: {
-          orderBy: { sortOrder: "asc" },
-        },
-        variants: true,
-      },
+      include: productWithRelations.include,
       orderBy: { createdAt: "desc" },
     });
 
-    const productsWithScore = products.map((product) => ({
-      ...product,
-      completenessScore: computeCompleteness(product as ProductWithRelations),
-    }));
+    const serialized = products.map((product) => {
+      const pWithScore = {
+        ...product,
+        completenessScore: computeCompleteness(product as any),
+      };
+      return serializeProduct(pWithScore as any);
+    });
 
-    return NextResponse.json(productsWithScore);
+    return NextResponse.json(serialized);
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error(`[PRODUCTS_GET] ${error.message}`);
@@ -54,6 +52,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+
+    if ("colour" in body || "size" in body || "material" in body) {
+      return NextResponse.json(
+        { error: "colour, size, and material are no longer accepted. Use the attributes array on each variant instead." },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
       description,
@@ -65,8 +71,8 @@ export async function POST(req: NextRequest) {
       isFeatured,
       isOnSale,
       stockQuantity,
-      images,
-      variants,
+      images = [],
+      variants = [],
     } = body;
 
     if (!name || price === undefined) {
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.log("CREATING PRODUCT IN DB - Payload:", { name, price, categoryId, imagesCount: images?.length });
-    const product = await prisma.$transaction(async (tx) => {
+    const serializedProduct = await prisma.$transaction(async (tx) => {
       const newProduct = await tx.product.create({
         data: {
           name,
@@ -98,46 +104,80 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      if (images && images.length > 0) {
-        for (let i = 0; i < images.length; i++) {
-          const img = images[i];
+      // Create variants
+      const createdVariants = await Promise.all(
+        variants.map((v: VariantInput) =>
+          tx.productVariant.create({
+            data: {
+              productId: newProduct.id,
+              priceOverride: v.priceOverride,
+              stockQuantity: v.stockQuantity || 0,
+              sku: v.sku || null,
+              isActive: v.isActive !== undefined ? v.isActive : true,
+              attributes: {
+                create: v.attributes.map((a) => ({
+                  attributeDefinitionId: a.attributeDefinitionId,
+                  value: a.value,
+                })),
+              },
+            },
+          })
+        )
+      );
+
+      // Create images
+      const createdImages = await Promise.all(
+        images.map(async (img: ProductImageInput, idx: number) => {
           const url = typeof img === "string" ? img : img.url;
-          const blurDataUrl = (typeof img === "object" && img.blurDataUrl) 
-            ? img.blurDataUrl 
+          const blurDataUrl = (typeof img === "object" && img.blurDataUrl)
+            ? img.blurDataUrl
             : await generateBlurDataUrl(url);
-          
-          await tx.productImage.create({
+
+          return tx.productImage.create({
             data: {
               productId: newProduct.id,
               url,
+              altText: (typeof img === "object" && img.altText) ? img.altText : null,
               blurDataUrl,
-              colour: typeof img === "string" ? null : (img.colour || null),
-              sortOrder: i,
+              sortOrder: (typeof img === "object" && img.sortOrder !== undefined) ? img.sortOrder : idx,
             },
           });
+        })
+      );
+
+      // Link images to variants using variantIndex
+      for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
+        const imgInput = images[imgIdx];
+        const createdImage = createdImages[imgIdx];
+        if (typeof imgInput === "object" && imgInput.variantIndex !== undefined && imgInput.variantIndex !== null) {
+          const linkedVariant = createdVariants[imgInput.variantIndex];
+          if (linkedVariant) {
+            await tx.productImageVariant.create({
+              data: {
+                imageId: createdImage.id,
+                variantId: linkedVariant.id,
+              },
+            });
+          }
         }
       }
 
-      if (variants && variants.length > 0) {
-        await tx.productVariant.createMany({
-          data: variants.map((v: { colour?: string; size?: string; material?: string; priceOverride?: number; stockQuantity?: number; sku?: string; isActive?: boolean }) => ({
-            productId: newProduct.id,
-            colour: v.colour,
-            size: v.size,
-            material: v.material,
-            priceOverride: v.priceOverride,
-            stockQuantity: v.stockQuantity || 0,
-            sku: v.sku,
-            isActive: v.isActive !== undefined ? v.isActive : true,
-          })),
-        });
+      // Fetch the full product with all relation arrays resolved
+      const fullProduct = await tx.product.findUnique({
+        where: { id: newProduct.id },
+        include: productWithRelations.include,
+      });
+
+      if (!fullProduct) {
+        throw new Error("Product creation failed to retrieve record.");
       }
 
-      return newProduct;
+      const score = computeCompleteness(fullProduct as any);
+      return serializeProduct({ ...fullProduct, completenessScore: score } as any);
     });
 
-    console.log("PRODUCT CREATED SUCCESSFULLY:", product.id);
-    return NextResponse.json(product);
+    console.log("PRODUCT CREATED SUCCESSFULLY:", serializedProduct.id);
+    return NextResponse.json(serializedProduct);
   } catch (error: any) {
     console.error(`[PRODUCTS_POST]`, error);
     return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });

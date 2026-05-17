@@ -12,23 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/components/store/cart-provider";
 import { formatCurrency } from "@/lib/utils";
-import type { CartWithItems } from "@/lib/cart";
+import type { CartWithItemsSerialized } from "@/lib/cart";
 import { toast } from "sonner";
 
-function CartItemRow({ item }: { item: CartWithItems["items"][number] }) {
+function CartItemRow({ item }: { item: CartWithItemsSerialized["items"][number] }) {
   const { updateQuantity, removeItem } = useCart();
 
   const price = item.variant?.priceOverride
     ? Number(item.variant.priceOverride)
     : Number(item.product.price);
 
-  const variantLabel = [
-    item.variant?.colour,
-    item.variant?.size,
-    item.variant?.material,
-  ]
-    .filter(Boolean)
-    .join(" / ");
+  const variantLabel = item.variant?.label ?? "";
 
   const primaryImage = item.product.images[0]?.url ?? null;
 

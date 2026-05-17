@@ -112,6 +112,39 @@ async function main() {
   console.log("Categories ready.");
 
   // --- SECTION 4: Products (30+ products) ---
+  console.log("Seeding Attribute Definitions for Fashion...");
+  let sizeAttr = await prisma.attributeDefinition.findFirst({
+    where: { key: "size", categoryId: null },
+  });
+  if (!sizeAttr) {
+    sizeAttr = await prisma.attributeDefinition.create({
+      data: {
+        key: "size",
+        label: "Size",
+        inputType: "SELECT",
+        allowedValues: {
+          create: ["S", "M", "L", "XL"].map((value) => ({ value })),
+        },
+      },
+    });
+  }
+
+  let colourAttr = await prisma.attributeDefinition.findFirst({
+    where: { key: "colour", categoryId: null },
+  });
+  if (!colourAttr) {
+    colourAttr = await prisma.attributeDefinition.create({
+      data: {
+        key: "colour",
+        label: "Colour",
+        inputType: "SELECT",
+        allowedValues: {
+          create: ["Red", "Blue", "Black", "White"].map((value) => ({ value })),
+        },
+      },
+    });
+  }
+
   console.log("Seeding Products...");
   const products = [
     // Women's
@@ -180,10 +213,37 @@ async function main() {
           },
           variants: p.cat.includes("dresses") || p.cat.includes("shirts") || p.cat.includes("trousers") ? {
             create: [
-              { size: "S", stockQuantity: 10, isActive: true },
-              { size: "M", stockQuantity: 15, isActive: true },
-              { size: "L", stockQuantity: 20, isActive: true },
-            ]
+              {
+                stockQuantity: 10,
+                isActive: true,
+                attributes: {
+                  create: [
+                    { attributeDefinitionId: sizeAttr.id, value: "S" },
+                    { attributeDefinitionId: colourAttr.id, value: "Blue" },
+                  ],
+                },
+              },
+              {
+                stockQuantity: 15,
+                isActive: true,
+                attributes: {
+                  create: [
+                    { attributeDefinitionId: sizeAttr.id, value: "M" },
+                    { attributeDefinitionId: colourAttr.id, value: "Blue" },
+                  ],
+                },
+              },
+              {
+                stockQuantity: 20,
+                isActive: true,
+                attributes: {
+                  create: [
+                    { attributeDefinitionId: sizeAttr.id, value: "L" },
+                    { attributeDefinitionId: colourAttr.id, value: "Blue" },
+                  ],
+                },
+              },
+            ],
           } : undefined
         }
       });
@@ -283,7 +343,7 @@ async function main() {
                   unitPrice: prod1.price,
                   total: prod1.price,
                   variantId: prod1.variants[0]?.id,
-                  variantLabel: prod1.variants[0]?.size,
+                  variantLabel: "S / Blue",
                 },
                 {
                   productId: prod2.id,
@@ -292,7 +352,7 @@ async function main() {
                   unitPrice: prod2.price,
                   total: prod2.price,
                   variantId: prod2.variants[0]?.id,
-                  variantLabel: prod2.variants[0]?.size,
+                  variantLabel: "S / Blue",
                 }
               ]
             }

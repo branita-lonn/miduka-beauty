@@ -47,18 +47,46 @@ export async function POST(req: Request) {
     const store = await prisma.storeSettings.findFirst();
     const storeName = store?.storeName || "MiDuka";
     const returnPolicy = store?.returnPolicy || "Please contact us for returns.";
+    const currency = store?.currency || "KES";
 
     // Fetch product context if provided (customer viewing specific product)
     let productDetails = "";
     if (context?.productSlug) {
       const product = await prisma.product.findUnique({
         where: { slug: context.productSlug },
-        include: { category: true, variants: true }
+        include: {
+          category: true,
+          variants: {
+            include: {
+              attributes: {
+                include: { attributeDefinition: true }
+              }
+            }
+          }
+        }
       });
       if (product) {
-        productDetails = `The customer is currently viewing: ${product.name} (Price: KES ${product.price}, Category: ${product.category?.name}, Stock: ${product.stockQuantity}). 
+        const { computeVariantLabel } = await import("@/lib/variant-label");
+        const formattedVariants = product.variants.map((v) => {
+          const attrs = v.attributes.map((a) => ({
+            attributeDefinitionId: a.attributeDefinitionId,
+            key: a.attributeDefinition.key,
+            label: a.attributeDefinition.label,
+            unit: a.attributeDefinition.unit,
+            inputType: a.attributeDefinition.inputType,
+            value: a.value,
+          }));
+          return {
+            id: v.id,
+            label: computeVariantLabel(attrs),
+            stock: v.stockQuantity,
+            price: v.priceOverride ? Number(v.priceOverride) : Number(product.price)
+          };
+        });
+
+        productDetails = `The customer is currently viewing: ${product.name} (Price: ${currency} ${product.price}, Category: ${product.category?.name}, Stock: ${product.stockQuantity}). 
         Description: ${product.description || "N/A"}. 
-        Variants: ${JSON.stringify(product.variants.map(v => ({ size: v.size, colour: v.colour, stock: v.stockQuantity })))}`;
+        Variants: ${JSON.stringify(formattedVariants)}`;
       }
     }
 
@@ -69,7 +97,7 @@ export async function POST(req: Request) {
       select: { name: true, price: true, slug: true }
     });
 
-    const featuredInfo = featuredProducts.map(p => `${p.name} (KES ${p.price}, slug: ${p.slug})`).join(", ");
+    const featuredInfo = featuredProducts.map(p => `${p.name} (${currency} ${p.price}, slug: ${p.slug})`).join(", ");
 
     // Fetch active promotions
     const onSaleProducts = await prisma.product.findMany({
@@ -77,7 +105,7 @@ export async function POST(req: Request) {
         take: 5,
         select: { name: true, price: true, slug: true }
     });
-    const saleInfo = onSaleProducts.map(p => `${p.name} (KES ${p.price}, slug: ${p.slug})`).join(", ");
+    const saleInfo = onSaleProducts.map(p => `${p.name} (${currency} ${p.price}, slug: ${p.slug})`).join(", ");
 
     const systemPrompt = `
       Act as a friendly shopping assistant for ${storeName}.

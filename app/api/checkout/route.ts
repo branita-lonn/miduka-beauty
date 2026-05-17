@@ -11,6 +11,7 @@ import { z } from "zod";
 import { OrderStatus, PaymentStatus, PaymentMethod } from "@prisma/client";
 import { emitNewOrder } from "@/lib/socket";
 import { sendOrderConfirmation } from "@/lib/mail";
+import { computeVariantLabel } from "@/lib/variant-label";
 
 const SESSION_COOKIE = "miduka_session_id";
 
@@ -183,7 +184,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                   uPrice = Number(item.product.flashSale.salePrice);
                 }
               }
-              const vLabel = [item.variant?.colour, item.variant?.size, item.variant?.material].filter(Boolean).join(" / ");
+              let vLabel = "";
+              if (item.variant) {
+                const attrs = item.variant.attributes.map((a) => ({
+                  attributeDefinitionId: a.attributeDefinitionId,
+                  key: a.attributeDefinition.key,
+                  label: a.attributeDefinition.label,
+                  unit: a.attributeDefinition.unit,
+                  inputType: a.attributeDefinition.inputType,
+                  value: a.value,
+                }));
+                vLabel = computeVariantLabel(attrs);
+              }
               return {
                 productId: item.productId,
                 variantId: item.variantId,

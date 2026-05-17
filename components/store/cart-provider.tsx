@@ -13,7 +13,7 @@ import React, {
   useState,
 } from "react";
 import { toast } from "sonner";
-import type { CartWithItems } from "@/lib/cart";
+import type { CartWithItemsSerialized } from "@/lib/cart";
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ interface AddItemPayload {
 }
 
 interface CartContextValue {
-  cart: CartWithItems | null;
+  cart: CartWithItemsSerialized | null;
   isLoading: boolean;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -51,7 +51,7 @@ export function useCart(): CartContextValue {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
-function getItemPrice(item: CartWithItems["items"][number]): number {
+function getItemPrice(item: CartWithItemsSerialized["items"][number]): number {
   if (item.variant?.priceOverride) {
     return Number(item.variant.priceOverride);
   }
@@ -75,7 +75,7 @@ export default function CartProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [cart, setCart] = useState<CartWithItems | null>(null);
+  const [cart, setCart] = useState<CartWithItemsSerialized | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const hasMerged = useRef(false);
@@ -85,7 +85,7 @@ export default function CartProvider({
     try {
       const res = await fetch("/api/cart");
       if (!res.ok) throw new Error("Failed to fetch cart");
-      const data: CartWithItems = await res.json() as CartWithItems;
+      const data = await res.json() as CartWithItemsSerialized;
       setCart(data);
     } catch (error: unknown) {
       console.error("[CartProvider] fetchCart:", error);
@@ -155,7 +155,7 @@ export default function CartProvider({
           return;
         }
 
-        const updated: CartWithItems = await res.json() as CartWithItems;
+        const updated = await res.json() as CartWithItemsSerialized;
         setCart(updated);
         toast.success(
           productName ? `"${productName}" added to cart` : "Added to cart"

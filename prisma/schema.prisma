@@ -13,6 +13,24 @@ datasource db {
 
 // ─── ENUMS ────────────────────────────────────────────────────────────────────
 
+enum StoreVertical {
+  FASHION
+  ELECTRONICS
+  GADGETS
+  BEAUTY
+  JEWELLERY
+  FRESH_PRODUCE
+  GENERAL
+}
+
+enum AttributeInputType {
+  TEXT
+  NUMBER
+  SELECT
+  BOOLEAN
+  COLOR
+}
+
 enum UserRole {
   STORE_OWNER
   CUSTOMER
@@ -172,6 +190,9 @@ model StoreSettings {
   loyaltyPointsPerKes    Int      @default(1)
   loyaltyRedemptionRate Int      @default(100)
   whatsappEnabled       Boolean  @default(false)
+  storeVertical          StoreVertical @default(FASHION)
+  currency               String   @default("KES")
+  currencyLocale         String   @default("en-KE")
 
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -224,39 +245,98 @@ model Category {
   parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
   children Category[] @relation("CategoryToCategory")
   products Product[]
+  attributeDefinitions AttributeDefinition[]
 }
 
 model ProductImage {
   id          String   @id @default(cuid())
   url         String
   altText     String?
-  colour      String?
   blurDataUrl String?
   sortOrder   Int      @default(0)
   productId   String
   createdAt   DateTime @default(now())
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product      Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantLinks ProductImageVariant[]
 }
 
 model ProductVariant {
-  id            String   @id @default(cuid())
-  productId     String
-  colour        String?
-  size          String?
-  material      String?
-  priceOverride Decimal?
-  stockQuantity Int      @default(0)
-  lowStockThreshold Int   @default(5)
-  sku           String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(cuid())
+  productId         String
+  priceOverride     Decimal?
+  stockQuantity     Int      @default(0)
+  lowStockThreshold Int      @default(5)
+  sku               String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product     Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributes  ProductVariantAttribute[]
+  imageLinks  ProductImageVariant[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
   stockAlerts StockAlert[]
+}
+
+model AttributeDefinition {
+  id           String             @id @default(cuid())
+  key          String             // machine-readable, e.g. "ram", "screen_size", "energy_rating"
+  label        String             // human-readable, e.g. "RAM", "Screen Size", "Energy Rating"
+  unit         String?            // optional suffix rendered after the value, e.g. "GB", "inches"
+  inputType    AttributeInputType @default(TEXT)
+  sortOrder    Int                @default(0)
+  isFilterable Boolean            @default(false) // shows in storefront filter sidebar when true
+  categoryId   String?            // null = store-wide; set = scoped to one category
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  category      Category?                @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  allowedValues AttributeAllowedValue[]
+  values        ProductVariantAttribute[]
+
+  @@unique([key, categoryId]) // unique within scope (global or per-category)
+  @@index([categoryId])
+  @@index([isFilterable])
+  @@index([sortOrder])
+}
+
+model AttributeAllowedValue {
+  id                    String              @id @default(cuid())
+  attributeDefinitionId String
+  value                 String
+  sortOrder             Int                 @default(0)
+
+  attributeDefinition AttributeDefinition @relation(fields: [attributeDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([attributeDefinitionId, value])
+  @@index([attributeDefinitionId])
+}
+
+model ProductVariantAttribute {
+  id                    String   @id @default(cuid())
+  variantId             String
+  attributeDefinitionId String
+  value                 String   // always stored as string; interpret via inputType
+
+  variant             ProductVariant      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attributeDefinition AttributeDefinition @relation(fields: [attributeDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, attributeDefinitionId]) // one value per attribute per variant
+  @@index([variantId])
+  @@index([attributeDefinitionId])
+}
+
+model ProductImageVariant {
+  imageId   String
+  variantId String
+
+  image   ProductImage   @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@id([imageId, variantId])
+  @@index([variantId])
 }
 
 // ─── CART ─────────────────────────────────────────────────────────────────────

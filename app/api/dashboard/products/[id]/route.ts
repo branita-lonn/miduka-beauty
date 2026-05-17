@@ -6,6 +6,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug } from "@/lib/generate-slug";
 import { generateBlurDataUrl } from "@/lib/cloudinary-blur";
+import { computeCompleteness } from "@/lib/product-completeness";
+import { productWithRelations, ProductImageInput } from "@/types";
+import { serializeProduct } from "@/lib/serialize-product";
 
 export async function GET(
   req: NextRequest,
@@ -21,20 +24,15 @@ export async function GET(
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: {
-        category: true,
-        images: {
-          orderBy: { sortOrder: "asc" },
-        },
-        variants: true,
-      },
+      include: productWithRelations.include,
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json(product);
+    const score = computeCompleteness(product as any);
+    return NextResponse.json(serializeProduct({ ...product, completenessScore: score } as any));
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error(`[PRODUCT_GET] ${error.message}`);
@@ -57,6 +55,14 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await req.json();
+
+    if ("colour" in body || "size" in body || "material" in body) {
+      return NextResponse.json(
+        { error: "colour, size, and material are no longer accepted. Use the attributes array on each variant instead." },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
       description,
@@ -91,7 +97,7 @@ export async function PUT(
       });
     }
 
-    const product = await prisma.$transaction(async (tx) => {
+    const serialized = await prisma.$transaction(async (tx) => {
       const updatedProduct = await tx.product.update({
         where: { id: productId },
         data: {
@@ -109,32 +115,7 @@ export async function PUT(
         },
       });
 
-      if (images) {
-        await tx.productImage.deleteMany({
-          where: { productId },
-        });
-
-        if (images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const img = images[i];
-            const url = typeof img === "string" ? img : img.url;
-            const blurDataUrl = (typeof img === "object" && img.blurDataUrl) 
-              ? img.blurDataUrl 
-              : await generateBlurDataUrl(url);
-
-            await tx.productImage.create({
-              data: {
-                productId,
-                url,
-                blurDataUrl,
-                colour: typeof img === "string" ? null : (img.colour || null),
-                sortOrder: i,
-              },
-            });
-          }
-        }
-      }
-
+      const allVariants: any[] = [];
       if (variants) {
         const existingVariants = await tx.productVariant.findMany({
           where: { productId },
@@ -154,39 +135,131 @@ export async function PUT(
 
         for (const variant of variants) {
           if (variant.id) {
-            await tx.productVariant.update({
+            const updatedVar = await tx.productVariant.update({
               where: { id: variant.id },
               data: {
-                colour: variant.colour,
-                size: variant.size,
-                material: variant.material,
                 priceOverride: variant.priceOverride,
                 stockQuantity: variant.stockQuantity || 0,
-                sku: variant.sku,
+                sku: variant.sku || null,
                 isActive: variant.isActive !== undefined ? variant.isActive : true,
               },
             });
+            
+            await tx.productVariantAttribute.deleteMany({
+              where: { variantId: variant.id },
+            });
+
+            await Promise.all(
+              variant.attributes.map((a: any) =>
+                tx.productVariantAttribute.create({
+                  data: {
+                    variantId: variant.id,
+                    attributeDefinitionId: a.attributeDefinitionId,
+                    value: a.value,
+                  },
+                })
+              )
+            );
+            allVariants.push(updatedVar);
           } else {
-            await tx.productVariant.create({
+            const newVar = await tx.productVariant.create({
               data: {
                 productId,
-                colour: variant.colour,
-                size: variant.size,
-                material: variant.material,
                 priceOverride: variant.priceOverride,
                 stockQuantity: variant.stockQuantity || 0,
-                sku: variant.sku,
+                sku: variant.sku || null,
                 isActive: variant.isActive !== undefined ? variant.isActive : true,
+                attributes: {
+                  create: variant.attributes.map((a: any) => ({
+                    attributeDefinitionId: a.attributeDefinitionId,
+                    value: a.value,
+                  })),
+                },
               },
             });
+            allVariants.push(newVar);
           }
         }
       }
 
-      return updatedProduct;
+      if (images) {
+        await tx.productImage.deleteMany({
+          where: { productId },
+        });
+
+        if (images.length > 0) {
+          const createdImages = await Promise.all(
+            images.map(async (img: ProductImageInput, idx: number) => {
+              const url = typeof img === "string" ? img : img.url;
+              const blurDataUrl = (typeof img === "object" && img.blurDataUrl)
+                ? img.blurDataUrl
+                : await generateBlurDataUrl(url);
+
+              return tx.productImage.create({
+                data: {
+                  productId,
+                  url,
+                  blurDataUrl,
+                  altText: (typeof img === "object" && img.altText) ? img.altText : null,
+                  sortOrder: (typeof img === "object" && img.sortOrder !== undefined) ? img.sortOrder : idx,
+                },
+              });
+            })
+          );
+
+          // Create new image-variant links
+          for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
+            const imgInput = images[imgIdx];
+            const createdImage = createdImages[imgIdx];
+
+            if (typeof imgInput === "object") {
+              // 1. Link by variantIds
+              if (imgInput.variantIds && imgInput.variantIds.length > 0) {
+                for (const varId of imgInput.variantIds) {
+                  const variantExists = allVariants.some((v) => v.id === varId);
+                  if (variantExists) {
+                    await tx.productImageVariant.create({
+                      data: {
+                        imageId: createdImage.id,
+                        variantId: varId,
+                      },
+                    });
+                  }
+                }
+              }
+
+              // 2. Link by variantIndex
+              if (imgInput.variantIndex !== undefined && imgInput.variantIndex !== null) {
+                const linkedVariant = allVariants[imgInput.variantIndex];
+                if (linkedVariant) {
+                  await tx.productImageVariant.create({
+                    data: {
+                      imageId: createdImage.id,
+                      variantId: linkedVariant.id,
+                    },
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Fetch full product after updates resolve
+      const fullProduct = await tx.product.findUnique({
+        where: { id: productId },
+        include: productWithRelations.include,
+      });
+
+      if (!fullProduct) {
+        throw new Error("Product retrieval failed after update.");
+      }
+
+      const score = computeCompleteness(fullProduct as any);
+      return serializeProduct({ ...fullProduct, completenessScore: score } as any);
     });
 
-    return NextResponse.json(product);
+    return NextResponse.json(serialized);
   } catch (error: any) {
     console.error(`[PRODUCT_PUT]`, error);
     return NextResponse.json({ error: error.message || "Internal error" }, { status: 500 });
@@ -251,3 +324,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+

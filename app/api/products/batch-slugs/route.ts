@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { ProductPublic } from "@/types";
+import { computeVariantLabel } from "@/lib/variant-label";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -25,7 +26,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       include: {
         category: { select: { id: true, name: true, slug: true } },
         images: {
-          select: { id: true, url: true, altText: true, sortOrder: true, blurDataUrl: true },
+          select: {
+            id: true,
+            url: true,
+            altText: true,
+            sortOrder: true,
+            blurDataUrl: true,
+            createdAt: true,
+            variantLinks: {
+              select: { variantId: true }
+            }
+          },
           orderBy: { sortOrder: "asc" },
         },
         reviews: {
@@ -33,15 +44,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         },
         variants: {
           where: { isActive: true },
-          select: {
-            id: true,
-            colour: true,
-            size: true,
-            material: true,
-            priceOverride: true,
-            stockQuantity: true,
-            sku: true,
-            isActive: true,
+          include: {
+            attributes: {
+              include: { attributeDefinition: true },
+              orderBy: { attributeDefinition: { sortOrder: "asc" } },
+            },
           },
         },
       },
@@ -50,6 +57,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Map to public shape and maintain requested order
     const productMap = new Map<string, ProductPublic>();
     for (const p of rawProducts) {
+      const formattedVariants = p.variants.map((v) => {
+        const attrs = v.attributes.map((a) => ({
+          attributeDefinitionId: a.attributeDefinitionId,
+          key: a.attributeDefinition.key,
+          label: a.attributeDefinition.label,
+          unit: a.attributeDefinition.unit,
+          inputType: a.attributeDefinition.inputType,
+          value: a.value,
+        }));
+        return {
+          id: v.id,
+          priceOverride: v.priceOverride ? Number(v.priceOverride) : null,
+          stockQuantity: v.stockQuantity,
+          sku: v.sku,
+          isActive: v.isActive,
+          attributes: attrs,
+          label: computeVariantLabel(attrs),
+        };
+      });
+
       productMap.set(p.slug, {
         id: p.id,
         name: p.name,
@@ -72,20 +99,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           blurDataUrl: img.blurDataUrl,
           altText: img.altText,
           sortOrder: img.sortOrder,
+          createdAt: img.createdAt.toISOString(),
+          variantIds: img.variantLinks.map((vl) => vl.variantId),
         })),
-        variants: p.variants.map((v) => ({
-          id: v.id,
-          colour: v.colour,
-          size: v.size,
-          material: v.material,
-          priceOverride: v.priceOverride ? Number(v.priceOverride) : null,
-          stockQuantity: v.stockQuantity,
-          sku: v.sku,
-          isActive: v.isActive,
-        })),
+        variants: formattedVariants,
         reviewCount: p.reviews.length,
-        rating: p.reviews.length > 0 
-          ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / p.reviews.length 
+        rating: p.reviews.length > 0
+          ? p.reviews.reduce((acc, r) => acc + r.rating, 0) / p.reviews.length
           : 0,
       });
     }

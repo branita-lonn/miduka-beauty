@@ -532,7 +532,7 @@ export default function CheckoutPage() {
                 const price = item.variant?.priceOverride ? Number(item.variant.priceOverride) : Number(item.product.price);
                 const primaryImage = item.product.images[0]?.url;
                 const blurDataUrl = item.product.images[0]?.blurDataUrl;
-                const vLabel = [item.variant?.colour, item.variant?.size, item.variant?.material].filter(Boolean).join(" / ");
+                const vLabel = item.variant?.label ?? "";
                 return (
                   <div key={item.id} className="flex gap-4">
                     <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-muted border border-border flex-shrink-0">

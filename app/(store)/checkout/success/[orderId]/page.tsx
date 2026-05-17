@@ -153,9 +153,9 @@ export default async function CheckoutSuccessPage({
                   </div>
                   <div className="flex-1 text-sm">
                     <p className="font-medium line-clamp-2">{item.product.name}</p>
-                    {item.variant && (
+                    {item.variantLabel && (
                       <p className="text-muted-foreground text-xs">
-                        {[item.variant.colour, item.variant.size].filter(Boolean).join(" / ")}
+                        {item.variantLabel}
                       </p>
                     )}
                   </div>

@@ -16,7 +16,13 @@ const cartWithItems = Prisma.validator<Prisma.CartDefaultArgs>()({
             flashSale: true,
           },
         },
-        variant: true,
+        variant: {
+          include: {
+            attributes: {
+              include: { attributeDefinition: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
     },
@@ -24,6 +30,113 @@ const cartWithItems = Prisma.validator<Prisma.CartDefaultArgs>()({
 });
 
 export type CartWithItems = Prisma.CartGetPayload<typeof cartWithItems>;
+
+import { computeVariantLabel } from "@/lib/variant-label";
+
+export type CartItemVariantSerialized = {
+  id: string;
+  priceOverride: number | null;
+  stockQuantity: number;
+  sku: string | null;
+  isActive: boolean;
+  attributes: {
+    attributeDefinitionId: string;
+    key: string;
+    label: string;
+    unit: string | null;
+    inputType: string;
+    value: string;
+  }[];
+  label: string;
+};
+
+export type CartWithItemsSerialized = Omit<CartWithItems, "items"> & {
+  items: (Omit<CartWithItems["items"][number], "variant" | "product"> & {
+    product: Omit<CartWithItems["items"][number]["product"], "price" | "compareAtPrice" | "flashSale"> & {
+      price: number;
+      compareAtPrice: number | null;
+      flashSale: {
+        id: string;
+        productId: string;
+        salePrice: number;
+        startTime: Date;
+        endTime: Date;
+        createdAt: Date;
+      } | null;
+    };
+    variant: CartItemVariantSerialized | null;
+  })[];
+};
+
+export function serializeCart(cart: CartWithItems): CartWithItemsSerialized {
+  return {
+    id: cart.id,
+    customerId: cart.customerId,
+    sessionId: cart.sessionId,
+    createdAt: cart.createdAt,
+    updatedAt: cart.updatedAt,
+    items: cart.items.map((item) => {
+      if (!item.variant) {
+        return {
+          id: item.id,
+          cartId: item.cartId,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          product: {
+            ...item.product,
+            price: Number(item.product.price),
+            compareAtPrice: item.product.compareAtPrice ? Number(item.product.compareAtPrice) : null,
+            flashSale: item.product.flashSale ? {
+              ...item.product.flashSale,
+              salePrice: Number(item.product.flashSale.salePrice),
+            } : null,
+          },
+          variant: null,
+        };
+      }
+
+      const attrs = item.variant.attributes.map((a) => ({
+        attributeDefinitionId: a.attributeDefinitionId,
+        key: a.attributeDefinition.key,
+        label: a.attributeDefinition.label,
+        unit: a.attributeDefinition.unit,
+        inputType: a.attributeDefinition.inputType,
+        value: a.value,
+      }));
+
+      return {
+        id: item.id,
+        cartId: item.cartId,
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        product: {
+          ...item.product,
+          price: Number(item.product.price),
+          compareAtPrice: item.product.compareAtPrice ? Number(item.product.compareAtPrice) : null,
+          flashSale: item.product.flashSale ? {
+            ...item.product.flashSale,
+            salePrice: Number(item.product.flashSale.salePrice),
+          } : null,
+        },
+        variant: {
+          id: item.variant.id,
+          priceOverride: item.variant.priceOverride ? Number(item.variant.priceOverride) : null,
+          stockQuantity: item.variant.stockQuantity,
+          sku: item.variant.sku,
+          isActive: item.variant.isActive,
+          attributes: attrs,
+          label: computeVariantLabel(attrs),
+        },
+      };
+    }),
+  };
+}
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 

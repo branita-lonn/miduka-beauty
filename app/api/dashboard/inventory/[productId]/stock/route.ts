@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { sendBackInStockNotifications } from "@/lib/stock-alert-mailer";
+import { computeVariantLabel } from "@/lib/variant-label";
 
 export async function PATCH(
   req: NextRequest,
@@ -26,7 +27,16 @@ export async function PATCH(
     // Validate product exists
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: { variants: true }
+      include: {
+        variants: {
+          include: {
+            attributes: {
+              include: { attributeDefinition: true },
+              orderBy: { attributeDefinition: { sortOrder: "asc" } },
+            },
+          },
+        },
+      },
     });
 
     if (!product) {
@@ -35,26 +45,52 @@ export async function PATCH(
 
     let previousStock = 0;
     let newStock = stockQuantity;
+    let updatedVariantData = null;
 
     if (variantId) {
       const variant = product.variants.find(v => v.id === variantId);
       if (!variant) return NextResponse.json({ error: "Variant not found" }, { status: 404 });
-      
+
       previousStock = variant.stockQuantity;
-      
-      await prisma.productVariant.update({
+
+      const updated = await prisma.productVariant.update({
         where: { id: variantId },
-        data: { 
+        data: {
           stockQuantity: stockQuantity !== undefined ? stockQuantity : undefined,
           lowStockThreshold: lowStockThreshold !== undefined ? lowStockThreshold : undefined
-        }
+        },
+        include: {
+          attributes: {
+            include: { attributeDefinition: true },
+            orderBy: { attributeDefinition: { sortOrder: "asc" } },
+          },
+        },
       });
+
+      const attrs = updated.attributes.map((a) => ({
+        attributeDefinitionId: a.attributeDefinitionId,
+        key: a.attributeDefinition.key,
+        label: a.attributeDefinition.label,
+        unit: a.attributeDefinition.unit,
+        inputType: a.attributeDefinition.inputType,
+        value: a.value,
+      }));
+
+      updatedVariantData = {
+        id: updated.id,
+        stockQuantity: updated.stockQuantity,
+        lowStockThreshold: updated.lowStockThreshold,
+        sku: updated.sku,
+        isActive: updated.isActive,
+        attributes: attrs,
+        label: computeVariantLabel(attrs),
+      };
     } else {
       previousStock = product.stockQuantity;
-      
+
       await prisma.product.update({
         where: { id: productId },
-        data: { 
+        data: {
           stockQuantity: stockQuantity !== undefined ? stockQuantity : undefined,
           lowStockThreshold: lowStockThreshold !== undefined ? lowStockThreshold : undefined
         }
@@ -67,7 +103,10 @@ export async function PATCH(
       sendBackInStockNotifications(productId, variantId);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      ...(updatedVariantData && { variant: updatedVariantData }),
+    });
   } catch (error: unknown) {
     console.error("[PATCH /api/dashboard/inventory/[productId]/stock]", error);
     return NextResponse.json({ error: "Failed to update stock" }, { status: 500 });

@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { cookies } from "next/headers";
-import { getOrCreateCart } from "@/lib/cart";
+import { getOrCreateCart, serializeCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -109,16 +109,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         items: {
           include: {
             product: {
-              include: { images: { orderBy: { sortOrder: "asc" }, take: 1 } },
+              include: {
+                images: { orderBy: { sortOrder: "asc" }, take: 1 },
+                flashSale: true,
+              },
             },
-            variant: true,
+            variant: {
+              include: {
+                attributes: {
+                  include: { attributeDefinition: true },
+                },
+              },
+            },
           },
           orderBy: { createdAt: "asc" },
         },
       },
     });
 
-    return NextResponse.json(updatedCart);
+    if (!updatedCart) {
+      return NextResponse.json({ error: "Cart not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(serializeCart(updatedCart));
   } catch (error: unknown) {
     console.error("[POST /api/cart/items]", error);
     return NextResponse.json(

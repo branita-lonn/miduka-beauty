@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { cookies } from "next/headers";
-import { getOrCreateCart } from "@/lib/cart";
+import { getOrCreateCart, serializeCart } from "@/lib/cart";
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "miduka_session_id";
@@ -27,7 +27,7 @@ export async function GET(): Promise<NextResponse> {
 
     const cart = await getOrCreateCart(customerId, sessionId ?? undefined);
 
-    const response = NextResponse.json(cart);
+    const response = NextResponse.json(serializeCart(cart));
 
     // Set guest session cookie if not present
     if (!customerId && !sessionId) {

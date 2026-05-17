@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
+import { invalidateStoreSettingsCache } from "@/lib/store-settings-cache";
 
 import * as z from "zod";
 
@@ -33,6 +34,9 @@ const settingsSchema = z.object({
   metaDescription: z.string().optional().nullable(),
   heroCarouselInterval: z.number().int().min(2000).max(30000).optional(),
   heroCarouselAutoplay: z.boolean().optional(),
+  storeVertical: z.enum(["FASHION", "ELECTRONICS", "GADGETS", "BEAUTY", "JEWELLERY", "FRESH_PRODUCE", "GENERAL"]).optional(),
+  currency: z.string().min(1).max(5).optional(),
+  currencyLocale: z.string().min(2).max(10).optional(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -77,6 +81,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
         data: validatedData as any,
       });
     }
+
+    // Invalidate server cache
+    invalidateStoreSettingsCache();
 
     return NextResponse.json(updatedSettings);
   } catch (error: unknown) {
