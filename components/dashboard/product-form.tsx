@@ -1,5 +1,5 @@
 // components/dashboard/product-form.tsx
-// Unified multi-step form for creating and editing products
+// Unified multi-step form for creating and editing products supporting dynamic variant attributes
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
@@ -13,9 +13,10 @@ import { toast } from "sonner";
 import { Loader2, Plus, Trash2, Wand2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { CategoryWithRelations, ProductWithRelationsSerialized } from "@/types";
+import { CategoryWithRelations, AttributeDefinitionPublic } from "@/types";
 import { ImageUpload } from "./image-upload";
 import { AiDescriptionButton } from "./ai-description-button";
+import { VariantAttributeInput } from "./variant-attribute-input";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,19 +35,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const variantSchema = z.object({
   id: z.string().optional(),
-  colour: z.string().optional(),
-  size: z.string().optional(),
-  material: z.string().optional(),
-  priceOverride: z.coerce.number().optional(),
+  sku: z.string().optional().nullable(),
+  priceOverride: z.coerce.number().optional().nullable(),
   stockQuantity: z.coerce.number().int().default(0),
-  sku: z.string().optional(),
   isActive: z.boolean().default(true),
+  attributes: z.array(
+    z.object({
+      key: z.string(),
+      value: z.string(),
+    })
+  ).default([]),
 });
 
 const imageSchema = z.object({
   url: z.string(),
-  colour: z.string().optional().nullable(),
   blurDataUrl: z.string().optional().nullable(),
+  variantIndex: z.coerce.number().optional().nullable(),
+  variantIds: z.array(z.string()).default([]),
 });
 
 const formSchema = z.object({
@@ -67,14 +72,20 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface ProductFormProps {
-  initialData?: ProductWithRelationsSerialized | null;
+  initialData?: any | null;
   categories: CategoryWithRelations[];
   featuredCount: number;
+  availableAttributes?: AttributeDefinitionPublic[];
 }
 
 const STEPS = ["Details", "Description", "Variants", "Media"];
 
-export function ProductForm({ initialData, categories, featuredCount }: ProductFormProps) {
+export function ProductForm({
+  initialData,
+  categories,
+  featuredCount,
+  availableAttributes = [],
+}: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -96,20 +107,22 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
           isOnSale: initialData.isOnSale,
           description: initialData.description || "",
           stockQuantity: initialData.stockQuantity,
-          images: initialData.images?.map((img) => ({ 
+          images: initialData.images?.map((img: any) => ({ 
             url: img.url, 
-            colour: img.colour,
-            blurDataUrl: img.blurDataUrl 
+            blurDataUrl: img.blurDataUrl,
+            variantIndex: img.variantIndex,
+            variantIds: img.variantIds || [],
           })) || [],
-          variants: initialData.variants?.map((v) => ({
+          variants: initialData.variants?.map((v: any) => ({
             id: v.id,
-            colour: v.colour || "",
-            size: v.size || "",
-            material: v.material || "",
+            sku: v.sku || "",
             priceOverride: v.priceOverride ? Number(v.priceOverride) : undefined,
             stockQuantity: v.stockQuantity,
-            sku: v.sku || "",
             isActive: v.isActive,
+            attributes: v.attributes?.map((attr: any) => ({
+              key: attr.key,
+              value: attr.value,
+            })) || [],
           })) || [],
         }
       : {
@@ -133,10 +146,53 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
     name: "variants",
   });
 
-  // Extract unique colours for image assignment
-  const availableColours = [...new Set(form.watch("variants")
-    .map((v: any) => v.colour)
-    .filter(Boolean))] as string[];
+  // Category Scope dynamic selection
+  const selectedCategoryId = form.watch("categoryId");
+  const activeAttributes = availableAttributes.filter(
+    (attr) => !attr.categoryId || attr.categoryId === selectedCategoryId
+  );
+
+  const handleAddVariant = () => {
+    appendVariant({
+      sku: "",
+      priceOverride: undefined,
+      stockQuantity: 0,
+      isActive: true,
+      attributes: activeAttributes.map((attr) => ({
+        key: attr.key,
+        value: "",
+      })),
+    });
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    const deletedVariant = variantFields[index] as any;
+    const currentImages = [...form.getValues("images")];
+    const isEditMode = !!initialData;
+
+    if (isEditMode) {
+      const varId = deletedVariant.id;
+      if (varId) {
+        const updatedImages = currentImages.map((img) => ({
+          ...img,
+          variantIds: (img.variantIds || []).filter((id: string) => id !== varId),
+        }));
+        form.setValue("images", updatedImages);
+      }
+    } else {
+      const updatedImages = currentImages.map((img) => {
+        if (img.variantIndex === index) {
+          return { ...img, variantIndex: null };
+        } else if (img.variantIndex !== null && img.variantIndex !== undefined && img.variantIndex > index) {
+          return { ...img, variantIndex: img.variantIndex - 1 };
+        }
+        return img;
+      });
+      form.setValue("images", updatedImages);
+    }
+
+    removeVariant(index);
+  };
 
   const nextStep = async () => {
     let isValid = false;
@@ -479,8 +535,8 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
                           checked={field.value} 
                           onCheckedChange={(checked) => {
                             if (checked && !field.value && featuredCount >= 6) {
-                              toast.error("You can only feature up to 6 products. Remove one to add another.");
-                              return;
+                                toast.error("You can only feature up to 6 products. Remove one to add another.");
+                                return;
                             }
                             field.onChange(checked);
                           }} 
@@ -551,7 +607,7 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold">Inventory & Variants</h3>
-                  <p className="text-sm text-muted-foreground">Manage stock and options like size or colour.</p>
+                  <p className="text-sm text-muted-foreground">Manage stock and type-aware options dynamically.</p>
                 </div>
               </div>
 
@@ -585,7 +641,7 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
                     variant="outline"
                     size="sm"
                     className="rounded-xl"
-                    onClick={() => appendVariant({ colour: "", size: "", material: "", priceOverride: undefined, stockQuantity: 0, sku: "", isActive: true })}
+                    onClick={handleAddVariant}
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Add Variant
@@ -599,40 +655,62 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
                 ) : (
                   <div className="space-y-4">
                     {variantFields.map((field, index) => (
-                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 rounded-2xl bg-card border shadow-sm relative group">
+                      <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-5 p-5 rounded-2xl bg-card border shadow-sm relative group">
                         <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button type="button" variant="destructive" size="icon" className="h-7 w-7 rounded-full shadow-lg" onClick={() => removeVariant(index)}>
+                          <Button type="button" variant="destructive" size="icon" className="h-7 w-7 rounded-full shadow-lg" onClick={() => handleRemoveVariant(index)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                         
-                        <div className="md:col-span-3 space-y-3">
-                          <FormField control={form.control} name={`variants.${index}.colour`} render={({ field }: any) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Colour</FormLabel><FormControl><Input placeholder="Red" className="h-9 rounded-lg" {...field} /></FormControl></FormItem>
-                          )} />
-                          <FormField control={form.control} name={`variants.${index}.size`} render={({ field }: any) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Size</FormLabel><FormControl><Input placeholder="XL" className="h-9 rounded-lg" {...field} /></FormControl></FormItem>
-                          )} />
+                        {/* Dynamic Attributes Grid Column */}
+                        <div className="md:col-span-6 space-y-4">
+                          {activeAttributes.length === 0 ? (
+                            <p className="text-xs text-muted-foreground italic pt-4">
+                              No attributes scoped to this category. Define some in dashboard under Attributes.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {activeAttributes.map((attr) => {
+                                const fieldVal = form.watch(`variants.${index}.attributes`) || [];
+                                const attrObj = fieldVal.find((a: any) => a.key === attr.key);
+                                const value = attrObj ? attrObj.value : "";
+
+                                return (
+                                  <VariantAttributeInput
+                                    key={attr.key}
+                                    definition={attr}
+                                    value={value}
+                                    onChange={(newVal) => {
+                                      const currentAttrs = [...(form.getValues(`variants.${index}.attributes`) || [])];
+                                      const idx = currentAttrs.findIndex((a: any) => a.key === attr.key);
+                                      if (idx > -1) {
+                                        currentAttrs[idx].value = newVal;
+                                      } else {
+                                        currentAttrs.push({ key: attr.key, value: newVal });
+                                      }
+                                      form.setValue(`variants.${index}.attributes`, currentAttrs);
+                                    }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
-                        <div className="md:col-span-3 space-y-3">
-                          <FormField control={form.control} name={`variants.${index}.material`} render={({ field }: any) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Material</FormLabel><FormControl><Input placeholder="Cotton" className="h-9 rounded-lg" {...field} /></FormControl></FormItem>
-                          )} />
-                          <FormField control={form.control} name={`variants.${index}.sku`} render={({ field }: any) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">SKU</FormLabel><FormControl><Input placeholder="SKU-001" className="h-9 rounded-lg" {...field} /></FormControl></FormItem>
-                          )} />
-                        </div>
-
+                        {/* Inventory & Pricing Grid Column */}
                         <div className="md:col-span-4 space-y-3">
+                          <FormField control={form.control} name={`variants.${index}.sku`} render={({ field }: any) => (
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">SKU (Optional)</FormLabel><FormControl><Input placeholder="SKU-001" className="h-9 rounded-lg" {...field} value={field.value || ""} /></FormControl></FormItem>
+                          )} />
                           <FormField control={form.control} name={`variants.${index}.priceOverride`} render={({ field }: any) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Price Override</FormLabel><FormControl><Input type="number" placeholder="KES" className="h-9 rounded-lg" {...field} value={field.value || ""} /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Price Override (KES)</FormLabel><FormControl><Input type="number" placeholder="Override default price" className="h-9 rounded-lg" {...field} value={field.value || ""} /></FormControl></FormItem>
                           )} />
                           <FormField control={form.control} name={`variants.${index}.stockQuantity`} render={({ field }: any) => (
-                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Stock</FormLabel><FormControl><Input type="number" className="h-9 rounded-lg" {...field} /></FormControl></FormItem>
+                            <FormItem><FormLabel className="text-[10px] font-bold uppercase">Stock Quantity</FormLabel><FormControl><Input type="number" className="h-9 rounded-lg" {...field} /></FormControl></FormItem>
                           )} />
                         </div>
 
+                        {/* Variant Active Switch Column */}
                         <div className="md:col-span-2 flex flex-col items-center justify-center border-l pl-4 gap-2">
                           <span className="text-[10px] font-bold uppercase text-muted-foreground">Active</span>
                           <FormField control={form.control} name={`variants.${index}.isActive`} render={({ field }: any) => (
@@ -653,7 +731,7 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold">Visual Assets</h3>
-                  <p className="text-sm text-muted-foreground">Upload images and assign colours to enable auto-switching in the store.</p>
+                  <p className="text-sm text-muted-foreground">Upload images and link them to variant options for dynamic switching.</p>
                 </div>
               </div>
 
@@ -669,7 +747,8 @@ export function ProductForm({ initialData, categories, featuredCount }: ProductF
                         onRemove={(url: string) => field.onChange(field.value.filter((img: any) => img.url !== url))}
                         maxImages={12}
                         folder="miduka/products"
-                        availableColours={availableColours}
+                        variants={form.watch("variants") || []}
+                        isEditMode={!!initialData}
                       />
                     </FormControl>
                     <FormMessage />

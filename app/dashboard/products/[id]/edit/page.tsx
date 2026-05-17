@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { EditProductForm } from "@/components/dashboard/edit-product-form";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
+import { serializeProduct } from "@/lib/serialize-product";
 
 export const metadata: Metadata = {
   title: "Edit Product | MiDuka",
@@ -18,15 +19,30 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     redirect("/auth/login");
   }
 
-  const [product, categories, featuredCount] = await Promise.all([
+  const [product, categories, featuredCount, definitions] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
       include: {
         category: true,
         images: {
+          include: {
+            variantLinks: {
+              include: { variant: true },
+            },
+          },
           orderBy: { sortOrder: "asc" },
         },
-        variants: true,
+        variants: {
+          include: {
+            attributes: {
+              include: { attributeDefinition: true },
+              orderBy: { attributeDefinition: { sortOrder: "asc" } },
+            },
+            imageLinks: {
+              include: { image: true },
+            },
+          },
+        },
         flashSale: true,
       },
     }),
@@ -45,36 +61,30 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     }),
     prisma.product.count({
       where: { isFeatured: true }
-    })
+    }),
+    prisma.attributeDefinition.findMany({
+      orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+      include: { allowedValues: { orderBy: { sortOrder: "asc" } } },
+    }),
   ]);
 
   if (!product) {
     notFound();
   }
 
-  const serializedProduct = product ? {
-    ...product,
-    price: Number(product.price),
-    compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : null,
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
-    images: product.images.map((img) => ({
-      ...img,
-      createdAt: img.createdAt.toISOString(),
-    })),
-    variants: product.variants.map((v) => ({
-      ...v,
-      priceOverride: v.priceOverride ? Number(v.priceOverride) : null,
-      createdAt: v.createdAt.toISOString(),
-      updatedAt: v.updatedAt.toISOString(),
-    })),
-    flashSale: product.flashSale ? {
-      ...product.flashSale,
-      salePrice: Number(product.flashSale.salePrice),
-      startTime: product.flashSale.startTime.toISOString(),
-      endTime: product.flashSale.endTime.toISOString(),
-    } : null,
-  } : null;
+  const availableAttributes = definitions.map((def) => ({
+    id: def.id,
+    key: def.key,
+    label: def.label,
+    unit: def.unit,
+    inputType: def.inputType as "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN" | "COLOR",
+    sortOrder: def.sortOrder,
+    isFilterable: def.isFilterable,
+    categoryId: def.categoryId,
+    allowedValues: def.allowedValues.map((v) => v.value),
+  }));
+
+  const serializedProduct = serializeProduct(product);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 max-w-4xl mx-auto w-full">
@@ -89,6 +99,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           initialData={serializedProduct} 
           categories={categories} 
           featuredCount={featuredCount}
+          availableAttributes={availableAttributes}
         />
       </div>
     </div>

@@ -1,26 +1,27 @@
 // components/dashboard/image-upload.tsx
-// Multi-image upload component with drag-to-reorder and colour assignment
+// Multi-image upload component with drag-to-reorder and dynamic variant linking
 
 "use client";
 
 import React, { useState, DragEvent } from "react";
 import Image from "next/image";
-import { Upload, GripVertical, X, Loader2, Palette } from "lucide-react";
+import { Upload, GripVertical, X, Loader2, Link as LinkIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 
 interface ImageData {
   url: string;
   publicId?: string | null;
-  colour?: string | null;
   blurDataUrl?: string | null;
+  variantIndex?: number | null; // For create mode
+  variantIds?: string[];        // For edit mode
 }
 
 interface ImageUploadProps {
@@ -29,7 +30,8 @@ interface ImageUploadProps {
   onRemove: (url: string) => void;
   maxImages?: number;
   folder?: string;
-  availableColours?: string[];
+  variants?: any[];             // Current product variants
+  isEditMode?: boolean;
   resourceType?: "image" | "video";
 }
 
@@ -37,9 +39,10 @@ export function ImageUpload({
   value = [],
   onChange,
   onRemove,
-  maxImages = 8,
+  maxImages = 12,
   folder = "miduka/products",
-  availableColours = [],
+  variants = [],
+  isEditMode = false,
   resourceType = "image",
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -102,7 +105,12 @@ export function ImageUpload({
         }
 
         const data = await response.json();
-        newImages.push({ url: data.url, publicId: data.publicId || null, colour: null, blurDataUrl: data.blurDataUrl });
+        newImages.push({
+          url: data.url,
+          blurDataUrl: data.blurDataUrl || null,
+          variantIndex: null,
+          variantIds: [],
+        });
       }
 
       if (newImages.length > 0) {
@@ -145,11 +153,38 @@ export function ImageUpload({
     setDraggedIndex(null);
   };
 
-  const updateImageColour = (index: number, colour: string) => {
+  const getVariantLabel = (variant: any, idx: number) => {
+    if (variant.label) return variant.label;
+    if (variant.attributes && variant.attributes.length > 0) {
+      return variant.attributes.map((a: any) => a.value).filter(Boolean).join(" / ") || `Variant #${idx + 1}`;
+    }
+    return `Variant #${idx + 1}`;
+  };
+
+  // Toggle variant link in EDIT mode (supports checking multiple variants)
+  const toggleVariantEditLink = (imgIndex: number, variantId: string) => {
     const newValues = [...value];
-    newValues[index] = { 
-      ...newValues[index], 
-      colour: colour === "none" ? null : colour 
+    const currentIds = newValues[imgIndex].variantIds || [];
+    if (currentIds.includes(variantId)) {
+      newValues[imgIndex] = {
+        ...newValues[imgIndex],
+        variantIds: currentIds.filter((id) => id !== variantId),
+      };
+    } else {
+      newValues[imgIndex] = {
+        ...newValues[imgIndex],
+        variantIds: [...currentIds, variantId],
+      };
+    }
+    onChange(newValues);
+  };
+
+  // Select variant link in CREATE mode (supports checking a single variant or clearing)
+  const selectVariantCreateLink = (imgIndex: number, varIdx: number | null) => {
+    const newValues = [...value];
+    newValues[imgIndex] = {
+      ...newValues[imgIndex],
+      variantIndex: varIdx,
     };
     onChange(newValues);
   };
@@ -157,40 +192,61 @@ export function ImageUpload({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {value.map((img, index) => (
-          <div
-            key={img.url}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e)}
-            onDrop={(e) => handleDrop(e, index)}
-            className={cn(
-              "flex flex-col gap-2 p-2 rounded-2xl border bg-card/50 transition-all duration-300 group",
-              draggedIndex === index && "opacity-50"
-            )}
-          >
-            <div className="relative aspect-square rounded-xl overflow-hidden cursor-grab active:cursor-grabbing">
-              <div className="absolute top-2 right-2 z-10">
-                <button
-                  type="button"
-                  onClick={() => onRemove(img.url)}
-                  className="bg-destructive/90 text-destructive-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="absolute top-2 left-2 z-10">
-                <div className="bg-background/80 text-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm backdrop-blur-sm">
-                  <GripVertical className="h-4 w-4" />
-                </div>
-              </div>
-              {index === 0 && (
-                <div className="absolute bottom-2 left-2 z-10">
-                  <span className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full shadow-sm font-bold uppercase tracking-tight">
-                    Cover
-                  </span>
-                </div>
+        {value.map((img, index) => {
+          // Identify currently linked variants to show labels
+          let linkedLabel = "";
+          if (isEditMode) {
+            const linkedCount = (img.variantIds || []).length;
+            if (linkedCount === 0) linkedLabel = "Global Image";
+            else if (linkedCount === 1) {
+              const matchedVar = variants.find((v) => v.id === img.variantIds?.[0]);
+              linkedLabel = matchedVar ? getVariantLabel(matchedVar, 0) : "1 Variant Linked";
+            } else {
+              linkedLabel = `${linkedCount} Variants Linked`;
+            }
+          } else {
+            const hasIndex = img.variantIndex !== null && img.variantIndex !== undefined;
+            if (!hasIndex) linkedLabel = "Global Image";
+            else {
+              const matchedVar = variants[img.variantIndex!];
+              linkedLabel = matchedVar ? getVariantLabel(matchedVar, img.variantIndex!) : "Global Image";
+            }
+          }
+
+          return (
+            <div
+              key={img.url}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e)}
+              onDrop={(e) => handleDrop(e, index)}
+              className={cn(
+                "flex flex-col gap-2 p-2 rounded-2xl border bg-card/50 transition-all duration-300 group",
+                draggedIndex === index && "opacity-50"
               )}
+            >
+              <div className="relative aspect-square rounded-xl overflow-hidden cursor-grab active:cursor-grabbing">
+                <div className="absolute top-2 right-2 z-10">
+                  <button
+                    type="button"
+                    onClick={() => onRemove(img.url)}
+                    className="bg-destructive/90 text-destructive-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="absolute top-2 left-2 z-10">
+                  <div className="bg-background/80 text-foreground p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm backdrop-blur-sm">
+                    <GripVertical className="h-4 w-4" />
+                  </div>
+                </div>
+                {index === 0 && (
+                  <div className="absolute bottom-2 left-2 z-10">
+                    <span className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 rounded-full shadow-sm font-bold uppercase tracking-tight">
+                      Cover
+                    </span>
+                  </div>
+                )}
                 {resourceType === "image" ? (
                   <Image fill src={img.url} alt={`Upload ${index + 1}`} className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" />
                 ) : (
@@ -198,33 +254,95 @@ export function ImageUpload({
                 )}
               </div>
 
-            {/* Colour Assignment */}
-            {availableColours.length > 0 && (
-              <div className="px-1 py-1">
-                <Select
-                  value={img.colour || "none"}
-                  onValueChange={(val) => updateImageColour(index, val || "none")}
-                >
-                  <SelectTrigger className="h-8 text-[10px] bg-background/50 border-none shadow-none focus:ring-0">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <Palette className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                      <SelectValue placeholder="Assign colour" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No specific colour</SelectItem>
-                    {availableColours.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        ))}
-        
+              {/* Dynamic Variant Linking Popover */}
+              {variants.length > 0 && (
+                <div className="px-1 py-1 flex items-center justify-between gap-1">
+                  <Popover>
+                    <PopoverTrigger
+                      className="w-full h-8 text-[11px] rounded-lg justify-start gap-1.5 px-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors overflow-hidden flex items-center bg-transparent border border-transparent cursor-pointer"
+                    >
+                      <LinkIcon className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{linkedLabel}</span>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-3 rounded-2xl" align="start">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 pb-2 border-b">
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          <h4 className="font-semibold text-xs text-foreground uppercase tracking-wide">Link Image to Variant</h4>
+                        </div>
+                        
+                        {isEditMode ? (
+                          /* Edit Mode: Checkboxes for multiple links */
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pt-1.5">
+                            {variants.map((v, varIdx) => {
+                              const varId = v.id || `v-${varIdx}`;
+                              const isChecked = (img.variantIds || []).includes(varId);
+                              return (
+                                <label
+                                  key={varId}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-muted/50 cursor-pointer text-xs transition-colors"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleVariantEditLink(index, varId)}
+                                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                                  />
+                                  <span className="font-medium text-foreground truncate">
+                                    {getVariantLabel(v, varIdx)}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          /* Create Mode: Single select dropdown */
+                          <div className="space-y-1 pt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => selectVariantCreateLink(index, null)}
+                              className={cn(
+                                "w-full text-left px-2 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors",
+                                img.variantIndex === null || img.variantIndex === undefined
+                                  ? "bg-primary/10 text-primary"
+                                  : "hover:bg-muted"
+                              )}
+                            >
+                              Global (Show for all)
+                            </button>
+                            {variants.map((v, varIdx) => (
+                              <button
+                                key={varIdx}
+                                type="button"
+                                onClick={() => selectVariantCreateLink(index, varIdx)}
+                                className={cn(
+                                  "w-full text-left px-2 py-1.5 rounded-xl text-xs transition-colors truncate block",
+                                  img.variantIndex === varIdx
+                                    ? "bg-primary/10 text-primary font-semibold"
+                                    : "hover:bg-muted"
+                                )}
+                              >
+                                {getVariantLabel(v, varIdx)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  {/* Visual indication if linked */}
+                  {(isEditMode ? (img.variantIds || []).length > 0 : img.variantIndex !== null && img.variantIndex !== undefined) && (
+                    <Badge variant="secondary" className="h-5 px-1.5 rounded-md text-[9px] uppercase tracking-wider flex-shrink-0 text-primary font-bold">
+                      Linked
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
         {value.length < maxImages && (
           <label className="relative flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-2xl border-muted-foreground/25 hover:bg-primary/5 hover:border-primary/50 transition-all duration-300 cursor-pointer overflow-hidden group">
             {isUploading && (
