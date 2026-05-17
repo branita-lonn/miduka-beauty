@@ -39,12 +39,11 @@ interface InventoryProduct {
   images: { url: string }[];
   variants: {
     id: string;
-    colour?: string;
-    size?: string;
-    material?: string;
     stockQuantity: number;
     lowStockThreshold: number;
-    sku?: string;
+    sku?: string | null;
+    label?: string;
+    attributes?: { key: string; value: string }[];
   }[];
 }
 
@@ -235,7 +234,7 @@ export function InventoryTable({ initialProducts }: InventoryTableProps) {
                         <TableCell className="pl-8">
                           <div className="flex flex-col">
                             <span className="text-xs font-bold">
-                              {[variant.colour, variant.size, variant.material].filter(Boolean).join(" / ")}
+                              {variant.label || (variant.attributes || []).map((a) => a.value).filter(Boolean).join(" / ") || `Variant #${variant.id.slice(-4)}`}
                             </span>
                             <span className="text-[10px] text-muted-foreground">SKU: {variant.sku || "N/A"}</span>
                           </div>
