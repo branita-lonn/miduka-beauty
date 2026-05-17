@@ -45,7 +45,7 @@ export function computeCompleteness(product: ProductWithRelations): number {
   // If product has variants, all active variants must have at least one attribute value mapped.
   if (product.variants && product.variants.length > 0) {
     const activeVariants = product.variants.filter((v) => v.isActive);
-    if (activeVariants.length > 0 && activeVariants.every((v) => v.attributes && v.attributes.length > 0)) {
+    if (activeVariants.length > 0 && activeVariants.every((v) => v.attributes && v.attributes.length > 0 && v.attributes.every((a: any) => a.value))) {
       score += 15;
     } else if (activeVariants.length === 0) {
       score += 15;

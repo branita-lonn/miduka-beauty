@@ -8,6 +8,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { computeCompleteness } from "@/lib/product-completeness";
 import { ProductWithRelations } from "@/types";
+import { serializeProduct } from "@/lib/serialize-product";
 
 export const metadata: Metadata = {
   title: "Products | MiDuka",
@@ -25,38 +26,36 @@ export default async function ProductsPage() {
     include: {
       category: true,
       images: {
+        include: {
+          variantLinks: {
+            include: { variant: true },
+          },
+        },
         orderBy: { sortOrder: "asc" },
       },
-      variants: true,
+      variants: {
+        include: {
+          attributes: {
+            include: { attributeDefinition: true },
+            orderBy: { attributeDefinition: { sortOrder: "asc" } },
+          },
+          imageLinks: {
+            include: { image: true },
+          },
+        },
+      },
       flashSale: true,
     },
     orderBy: { createdAt: "desc" },
   });
 
-  const productsWithScore = products.map((product) => ({
-    ...product,
-    price: Number(product.price),
-    compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : null,
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
-    images: product.images.map((img) => ({
-      ...img,
-      createdAt: img.createdAt.toISOString(),
-    })),
-    variants: product.variants.map((v) => ({
-      ...v,
-      priceOverride: v.priceOverride ? Number(v.priceOverride) : null,
-      createdAt: v.createdAt.toISOString(),
-      updatedAt: v.updatedAt.toISOString(),
-    })),
-    flashSale: product.flashSale ? {
-      ...product.flashSale,
-      salePrice: Number(product.flashSale.salePrice),
-      startTime: product.flashSale.startTime.toISOString(),
-      endTime: product.flashSale.endTime.toISOString(),
-    } : null,
-    completenessScore: computeCompleteness(product as any),
-  }));
+  const productsWithScore = products.map((product) => {
+    const serialized = serializeProduct(product);
+    return {
+      ...serialized,
+      completenessScore: computeCompleteness(product as any),
+    };
+  });
 
   const featuredCount = products.filter(p => p.isFeatured).length;
 

@@ -154,7 +154,7 @@ export function ProductsClient({ initialProducts }: { initialProducts: ProductWi
 
     if (p.variants && p.variants.length > 0) {
       const activeVariants = p.variants.filter((v) => v.isActive);
-      if (activeVariants.length > 0 && !activeVariants.every((v) => v.attributes && v.attributes.length > 0)) {
+      if (activeVariants.length > 0 && !activeVariants.every((v) => v.attributes && v.attributes.length > 0 && v.attributes.every((a) => a.value))) {
         missing.push("Define attributes on active variants (+15pts)");
       }
     }
