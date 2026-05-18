@@ -140,11 +140,11 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   // (In a real app, check if they bought the product)
   const isEligible = !!session?.user;
 
-  // Derive which attribute keys this specific product uses across all its variants.
-  const usedKeys = new Set(
-    product.variants.flatMap((v) => v.attributes.map((a) => a.attributeDefinition.key))
+  // Derive which attribute definitions this specific product uses across all its variants.
+  const usedDefinitionIds = new Set(
+    product.variants.flatMap((v) => v.attributes.map((a) => a.attributeDefinitionId))
   );
-  const relevantDefinitions = allDefinitions.filter((d) => usedKeys.has(d.key));
+  const relevantDefinitions = allDefinitions.filter((d) => usedDefinitionIds.has(d.id));
 
   const serializedDefinitions: AttributeDefinitionPublic[] = relevantDefinitions.map((d) => ({
     id: d.id,
