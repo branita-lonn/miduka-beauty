@@ -670,29 +670,39 @@ export function ProductForm({
                             </p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {activeAttributes.map((attr) => {
-                                const fieldVal = form.watch(`variants.${index}.attributes`) || [];
-                                const attrObj = fieldVal.find((a: any) => a.key === attr.key);
-                                const value = attrObj ? attrObj.value : "";
+                              {activeAttributes.map((attr) => (
+                                <FormField
+                                  key={attr.key}
+                                  control={form.control}
+                                  name={`variants.${index}.attributes`}
+                                  render={({ field }) => {
+                                    const currentAttrs = field.value || [];
+                                    const attrObj = currentAttrs.find((a: any) => a.key === attr.key);
+                                    const value = attrObj ? attrObj.value : "";
 
-                                return (
-                                  <VariantAttributeInput
-                                    key={attr.key}
-                                    definition={attr}
-                                    value={value}
-                                    onChange={(newVal) => {
-                                      const currentAttrs = [...(form.getValues(`variants.${index}.attributes`) || [])];
-                                      const idx = currentAttrs.findIndex((a: any) => a.key === attr.key);
-                                      if (idx > -1) {
-                                        currentAttrs[idx].value = newVal;
-                                      } else {
-                                        currentAttrs.push({ key: attr.key, value: newVal });
-                                      }
-                                      form.setValue(`variants.${index}.attributes`, currentAttrs);
-                                    }}
-                                  />
-                                );
-                              })}
+                                    return (
+                                      <FormItem className="space-y-0">
+                                        <FormControl>
+                                          <VariantAttributeInput
+                                            definition={attr}
+                                            value={value}
+                                            onChange={(newVal) => {
+                                              const updated = [...currentAttrs];
+                                              const idx = updated.findIndex((a: any) => a.key === attr.key);
+                                              if (idx > -1) {
+                                                updated[idx] = { ...updated[idx], value: newVal };
+                                              } else {
+                                                updated.push({ key: attr.key, value: newVal });
+                                              }
+                                              field.onChange(updated);
+                                            }}
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    );
+                                  }}
+                                />
+                              ))}
                             </div>
                           )}
                         </div>
