@@ -1,7 +1,7 @@
 {
-  "name": "MiDuka General",
-  "short_name": "MiDuka Gen",
-  "description": "Your online e-commerce platform",
+  "name": "MiDuka gadjets",
+  "short_name": "MiDuka gadjets",
+  "description": "Your online shopping patner",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
