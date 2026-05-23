@@ -58,10 +58,10 @@ export default function ProductCard({
   return (
     <Link
       href={`/products/${slug}`}
-      className="group relative flex flex-col rounded-4xl bg-card p-1 pb-3 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-border/40 hover:border-primary/20"
+      className="group relative flex flex-col rounded-4xl bg-card pb-3 transition-all duration-300 overflow-hidden"
     >
       {/* Image */}
-      <div className="relative rounded-3xl aspect-[4/3] overflow-hidden bg-muted mb-3 flex-shrink-0">
+      <div className="relative rounded-3xl aspect-[3/4] overflow-hidden bg-muted mb-3 flex-shrink-0">
         {primaryImage ? (
           <Image
             src={primaryImage}

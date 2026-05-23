@@ -72,42 +72,42 @@ export default async function ProductsPage() {
   return (
     <>
       <BreadcrumbSchema items={breadcrumbItems} />
-      <div className="container mx-auto px-4 py-10 flex flex-col gap-8">
+      <div className="container mx-auto px-2 md:gap-4 py-10 flex flex-col gap-8">
         {/* Header */}
-      <div>
-        <nav aria-label="breadcrumb" className="text-sm text-muted-foreground mb-2">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Home
-          </Link>
-          <span className="mx-2">›</span>
-          <span className="text-foreground">All Products</span>
-        </nav>
-        <h1 className="text-3xl font-bold text-foreground">All Products</h1>
-      </div>
+        <div>
+          <nav aria-label="breadcrumb" className="text-sm text-muted-foreground mb-2">
+            <Link href="/" className="hover:text-foreground transition-colors">
+              Home
+            </Link>
+            <span className="mx-2">›</span>
+            <span className="text-foreground">All Products</span>
+          </nav>
+          <h1 className="text-3xl font-bold text-foreground">All Products</h1>
+        </div>
 
-      {/* Filters + Grid layout */}
-      <div className="flex gap-8 items-start">
-        <ProductFilters filterableAttributes={serializedFilters} mode="desktop" />
+        {/* Filters + Grid layout */}
+        <div className="flex gap-8 items-start">
+          <ProductFilters filterableAttributes={serializedFilters} mode="desktop" />
 
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-          {/* Mobile filter trigger + sort row */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Suspense fallback={<Skeleton className="h-9 w-32 rounded-2xl" />}>
-              <ProductFilters filterableAttributes={serializedFilters} mode="mobile" />
-            </Suspense>
-            <div className="ml-auto">
-              <Suspense fallback={<Skeleton className="h-9 w-44 rounded-2xl" />}>
-                <ProductSort />
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
+            {/* Mobile filter trigger + sort row */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Suspense fallback={<Skeleton className="h-9 w-32 rounded-2xl" />}>
+                <ProductFilters filterableAttributes={serializedFilters} mode="mobile" />
               </Suspense>
+              <div className="ml-auto">
+                <Suspense fallback={<Skeleton className="h-9 w-44 rounded-2xl" />}>
+                  <ProductSort />
+                </Suspense>
+              </div>
             </div>
-          </div>
 
-          <Suspense fallback={<Skeleton className="h-64 w-full rounded-3xl" />}>
-            <ProductGrid />
-          </Suspense>
+            <Suspense fallback={<Skeleton className="h-64 w-full rounded-3xl" />}>
+              <ProductGrid />
+            </Suspense>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }

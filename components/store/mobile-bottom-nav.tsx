@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Grid2X2, ShoppingCart, Gift, User, Search } from "lucide-react";
+import { Home, Grid2X2, Gift, User, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -39,8 +39,8 @@ export default function MobileBottomNav() {
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors",
                 isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-primary my-2 rounded-4xl bg-primary/20"
+                  : "text-muted-foreground hover:text-foreground my-2"
               )}
               aria-current={isActive ? "page" : undefined}
             >
