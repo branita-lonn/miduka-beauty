@@ -18,7 +18,7 @@ async function main() {
 
   for (const def of definitions) {
     let existing = await prisma.attributeDefinition.findFirst({
-      where: { key: def.key, categoryId: null },
+      where: { key: def.key, isGlobal: true },
     });
 
     if (!existing) {

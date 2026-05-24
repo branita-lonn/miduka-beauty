@@ -12,6 +12,10 @@ const updateSchema = z.object({
   unit: z.string().max(20).optional().nullable(),
   sortOrder: z.number().int().optional(),
   isFilterable: z.boolean().optional(),
+  isGlobal: z.boolean().optional(),
+  isVariantAttr: z.boolean().optional(),
+  categoryIds: z.array(z.string().cuid()).optional(),
+  includeChildren: z.boolean().optional(),
   allowedValues: z.array(z.string().min(1)).optional(),
 });
 
@@ -31,7 +35,10 @@ export async function GET(req: NextRequest, { params }: RouteParams): Promise<Ne
 
     const def = await prisma.attributeDefinition.findUnique({
       where: { id },
-      include: { allowedValues: { orderBy: { sortOrder: "asc" } } },
+      include: { 
+        allowedValues: { orderBy: { sortOrder: "asc" } },
+        categories: true,
+      },
     });
 
     if (!def) {
@@ -46,7 +53,11 @@ export async function GET(req: NextRequest, { params }: RouteParams): Promise<Ne
       inputType: def.inputType,
       sortOrder: def.sortOrder,
       isFilterable: def.isFilterable,
-      categoryId: def.categoryId,
+      isGlobal: def.isGlobal,
+      isVariantAttr: def.isVariantAttr,
+      categoryIds: def.categories.map(c => c.categoryId),
+      // We assume includeChildren is the same for all category relations for a single attribute definition
+      includeChildren: def.categories.length > 0 ? def.categories[0].includeChildren : false,
       allowedValues: def.allowedValues.map((v) => v.value),
     };
 
@@ -68,9 +79,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams): Promise<Ne
     const { id } = await params;
     const body = await req.json();
 
-    if ("key" in body || "inputType" in body || "categoryId" in body) {
+    if ("key" in body || "inputType" in body) {
       return NextResponse.json(
-        { error: "key, inputType, and categoryId cannot be changed after creation. Delete and recreate the attribute instead." },
+        { error: "key and inputType cannot be changed after creation. Delete and recreate the attribute instead." },
         { status: 400 }
       );
     }
@@ -93,8 +104,27 @@ export async function PUT(req: NextRequest, { params }: RouteParams): Promise<Ne
           unit: validatedData.unit !== undefined ? validatedData.unit : undefined,
           sortOrder: validatedData.sortOrder,
           isFilterable: validatedData.isFilterable,
+          isGlobal: validatedData.isGlobal,
+          isVariantAttr: validatedData.isVariantAttr,
         },
       });
+
+      // Update categories if provided and not global
+      if (validatedData.categoryIds !== undefined && validatedData.includeChildren !== undefined) {
+        await tx.attributeDefinitionCategory.deleteMany({
+          where: { attributeDefinitionId: id }
+        });
+
+        if (!validatedData.isGlobal && validatedData.categoryIds.length > 0) {
+          await tx.attributeDefinitionCategory.createMany({
+            data: validatedData.categoryIds.map(cid => ({
+              attributeDefinitionId: id,
+              categoryId: cid,
+              includeChildren: validatedData.includeChildren!
+            }))
+          });
+        }
+      }
 
       if (validatedData.allowedValues) {
         // SELECT attribute type validation check

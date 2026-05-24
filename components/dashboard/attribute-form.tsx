@@ -42,7 +42,10 @@ const attributeSchema = z.object({
   inputType: z.enum(["TEXT", "NUMBER", "SELECT", "BOOLEAN", "COLOR"]),
   sortOrder: z.coerce.number().int().default(0),
   isFilterable: z.boolean().default(false),
-  categoryId: z.string().optional().nullable(),
+  isVariantAttr: z.boolean().default(true),
+  isGlobal: z.boolean().default(true),
+  categoryIds: z.array(z.string()).default([]),
+  includeChildren: z.boolean().default(false),
   allowedValues: z.array(z.string().min(1)).default([]),
 });
 
@@ -69,13 +72,18 @@ export function AttributeForm({ initialData, categories, onSuccess }: AttributeF
       inputType: initialData?.inputType || "TEXT",
       sortOrder: initialData?.sortOrder ?? 0,
       isFilterable: initialData?.isFilterable ?? false,
-      categoryId: initialData?.categoryId || null,
+      isVariantAttr: initialData?.isVariantAttr ?? true,
+      isGlobal: initialData?.isGlobal ?? true,
+      categoryIds: initialData?.categoryIds || [],
+      includeChildren: false,
       allowedValues: initialData?.allowedValues || [],
     },
   });
 
   const selectedInputType = form.watch("inputType");
   const allowedValues = form.watch("allowedValues") || [];
+  const isGlobalScope = form.watch("isGlobal");
+  const isVariantMode = form.watch("isVariantAttr");
 
   // When key field changes, force it to lowercase and remove invalid characters
   const handleKeyChange = (val: string) => {
@@ -123,12 +131,16 @@ export function AttributeForm({ initialData, categories, onSuccess }: AttributeF
             unit: data.unit || null,
             sortOrder: data.sortOrder,
             isFilterable: data.isFilterable,
+            isVariantAttr: data.isVariantAttr,
+            isGlobal: data.isGlobal,
+            categoryIds: data.isGlobal ? [] : data.categoryIds,
+            includeChildren: data.includeChildren,
             allowedValues: data.inputType === "SELECT" ? data.allowedValues : undefined,
           }
         : {
             ...data,
             unit: data.unit || null,
-            categoryId: data.categoryId || null,
+            categoryIds: data.isGlobal ? [] : data.categoryIds,
           };
 
       const response = await fetch(url, {
@@ -257,39 +269,134 @@ export function AttributeForm({ initialData, categories, onSuccess }: AttributeF
           />
         </div>
 
-        {/* Category Scope Selection (Locked on Edit) */}
-        <FormField
-          control={form.control}
-          name="categoryId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category Scope</FormLabel>
-              <FormControl>
-                <UiSelect
-                  disabled={isEdit}
-                  value={field.value || "store-wide"}
-                  onValueChange={(val) => field.onChange(val === "store-wide" ? null : val)}
-                >
-                  <SelectTrigger className="rounded-xl border-border/50 bg-background/50 h-10">
-                    <SelectValue placeholder="Store-wide" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="store-wide">Store-wide (All categories)</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </UiSelect>
-              </FormControl>
-              <FormDescription>
-                Make this attribute available only under a specific category. Locked after creation.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
+        {/* Type Selection */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="isVariantAttr"
+            render={({ field }) => (
+              <FormItem className="flex flex-col justify-end pb-2">
+                <div className="flex items-center gap-2">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="cursor-pointer">Variant Attribute</FormLabel>
+                    <FormDescription className="text-[10px] leading-tight">
+                      Creates purchasable variants (e.g. Color, Size). Turn off for informational specs.
+                    </FormDescription>
+                  </div>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="isFilterable"
+            render={({ field }) => (
+              <FormItem className="flex flex-col justify-end pb-2">
+                <div className="flex items-center gap-2">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="cursor-pointer">Use as Filter</FormLabel>
+                    <FormDescription className="text-[10px] leading-tight">
+                      Shows in storefront sidebar.
+                    </FormDescription>
+                  </div>
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Scope Selection */}
+        <div className="space-y-4 rounded-2xl border p-4 bg-muted/10">
+          <FormField
+            control={form.control}
+            name="isGlobal"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-2 space-y-0">
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div>
+                  <FormLabel className="cursor-pointer">Global Attribute</FormLabel>
+                  <FormDescription className="text-[10px]">Applies to all products in the store.</FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {!isGlobalScope && (
+            <div className="pl-6 space-y-4 pt-2 border-t border-border/50 mt-4">
+              <FormField
+                control={form.control}
+                name="categoryIds"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Select Categories</FormLabel>
+                    <div className="max-h-40 overflow-y-auto rounded-xl border border-border/50 bg-background/50 p-2 space-y-2">
+                      {categories.map((cat) => (
+                        <label key={cat.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted p-1 rounded-md">
+                          <input
+                            type="checkbox"
+                            className="rounded border-primary/50 text-primary focus:ring-primary h-4 w-4"
+                            checked={field.value?.includes(cat.id)}
+                            onChange={(e) => {
+                              const current = field.value || [];
+                              if (e.target.checked) {
+                                field.onChange([...current, cat.id]);
+                              } else {
+                                field.onChange(current.filter((id) => id !== cat.id));
+                              }
+                            }}
+                          />
+                          {cat.name}
+                        </label>
+                      ))}
+                      {categories.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic p-2">No categories available.</p>
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="includeChildren"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="rounded border-primary/50 text-primary focus:ring-primary h-4 w-4 mt-0.5"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-medium">Apply to Subcategories</FormLabel>
+                      <FormDescription className="text-[10px]">
+                        Automatically apply this attribute to all child categories.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
           )}
-        />
+        </div>
 
         {/* Allowed Values Chip List (For SELECT type only) */}
         {selectedInputType === "SELECT" && (
@@ -356,25 +463,6 @@ export function AttributeForm({ initialData, categories, onSuccess }: AttributeF
                   />
                 </FormControl>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* isFilterable Switch */}
-          <FormField
-            control={form.control}
-            name="isFilterable"
-            render={({ field }) => (
-              <FormItem className="flex flex-col justify-end pb-2">
-                <div className="flex items-center gap-2">
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel className="cursor-pointer">Use as Storefront Filter</FormLabel>
-                </div>
               </FormItem>
             )}
           />

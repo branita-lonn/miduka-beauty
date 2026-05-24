@@ -76,6 +76,7 @@ export async function PUT(
       stockQuantity,
       images,
       variants,
+      productAttributes,
     } = body;
 
     const existingProduct = await prisma.product.findUnique({
@@ -179,6 +180,23 @@ export async function PUT(
             });
             allVariants.push(newVar);
           }
+        }
+      }
+
+      // Update product-level attributes
+      if (productAttributes !== undefined) {
+        await tx.productAttribute.deleteMany({
+          where: { productId },
+        });
+
+        if (productAttributes.length > 0) {
+          await tx.productAttribute.createMany({
+            data: productAttributes.map((pa: any) => ({
+              productId,
+              attributeDefinitionId: pa.attributeDefinitionId,
+              value: pa.value,
+            })),
+          });
         }
       }
 

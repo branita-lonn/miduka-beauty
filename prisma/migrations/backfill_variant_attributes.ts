@@ -28,7 +28,7 @@ async function main() {
   // 1. Fetch fashion attribute definitions
   const fashionKeys = ["colour", "size", "material"];
   const definitions = await prisma.attributeDefinition.findMany({
-    where: { key: { in: fashionKeys }, categoryId: null }
+    where: { key: { in: fashionKeys }, isGlobal: true }
   });
 
   const defMap = new Map(definitions.map(d => [d.key, d.id]));

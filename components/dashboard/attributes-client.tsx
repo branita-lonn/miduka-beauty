@@ -137,12 +137,22 @@ export function AttributesClient({ initialAttributes, categories }: AttributesCl
               </TableRow>
             ) : (
               initialAttributes.map((attr) => {
-                const category = categories.find((c) => c.id === attr.categoryId);
+                const isGlobal = attr.isGlobal;
+                const catCount = attr.categoryIds?.length || 0;
 
                 return (
                   <TableRow key={attr.id} className="group transition-colors hover:bg-muted/30">
                     <TableCell className="font-mono text-xs font-semibold">{attr.key}</TableCell>
-                    <TableCell className="font-medium">{attr.label}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="font-medium">{attr.label}</span>
+                        {attr.isVariantAttr ? (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1 rounded-sm border-primary/20 bg-primary/5 text-primary">Variant</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1 rounded-sm border-muted-foreground/20 text-muted-foreground">Info Spec</Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="rounded-lg capitalize font-normal px-2.5 py-0.5">
                         {attr.inputType.toLowerCase()}
@@ -181,16 +191,32 @@ export function AttributesClient({ initialAttributes, categories }: AttributesCl
                       )}
                     </TableCell>
                     <TableCell>
-                      {category ? (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Layers className="h-3 w-3 flex-shrink-0" />
-                          <span>{category.name} Only</span>
-                        </div>
-                      ) : (
+                      {isGlobal ? (
                         <div className="flex items-center gap-1 text-xs text-primary font-medium">
                           <Sparkles className="h-3 w-3 flex-shrink-0" />
                           <span>Global</span>
                         </div>
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground border border-muted-foreground/30 px-2 py-0.5 rounded-full cursor-help hover:bg-muted/50 transition-colors">
+                                <Layers className="h-3 w-3 flex-shrink-0" />
+                                <span>{catCount} Categor{catCount === 1 ? 'y' : 'ies'}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[200px] p-2 text-xs">
+                              {catCount > 0 ? (
+                                <ul className="list-disc pl-3 space-y-0.5">
+                                  {attr.categoryIds.map(id => {
+                                    const c = categories.find(c => c.id === id);
+                                    return <li key={id}>{c?.name || "Unknown"}</li>;
+                                  })}
+                                </ul>
+                              ) : "No categories selected"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

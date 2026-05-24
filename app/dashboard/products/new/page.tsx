@@ -36,7 +36,7 @@ export default async function NewProductPage() {
     }),
     prisma.attributeDefinition.findMany({
       orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
-      include: { allowedValues: { orderBy: { sortOrder: "asc" } } },
+      include: { allowedValues: { orderBy: { sortOrder: "asc" } }, categories: true },
     }),
   ]);
 
@@ -48,8 +48,10 @@ export default async function NewProductPage() {
     inputType: def.inputType as "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN" | "COLOR",
     sortOrder: def.sortOrder,
     isFilterable: def.isFilterable,
-    categoryId: def.categoryId,
-    allowedValues: def.allowedValues.map((v) => v.value),
+    isGlobal: def.isGlobal,
+    isVariantAttr: def.isVariantAttr,
+    categoryIds: def.categories.map((c: any) => c.categoryId),
+    allowedValues: def.allowedValues.map((v: any) => v.value),
   }));
 
   return (

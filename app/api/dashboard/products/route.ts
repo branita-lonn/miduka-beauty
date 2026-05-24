@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       stockQuantity,
       images = [],
       variants = [],
+      productAttributes = [],
     } = body;
 
     if (!name || price === undefined) {
@@ -124,6 +125,17 @@ export async function POST(req: NextRequest) {
           })
         )
       );
+
+      // Create product-level attributes
+      if (productAttributes.length > 0) {
+        await tx.productAttribute.createMany({
+          data: productAttributes.map((pa: any) => ({
+            productId: newProduct.id,
+            attributeDefinitionId: pa.attributeDefinitionId,
+            value: pa.value,
+          })),
+        });
+      }
 
       // Create images
       const createdImages = await Promise.all(

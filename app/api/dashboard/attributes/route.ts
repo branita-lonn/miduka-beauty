@@ -14,7 +14,10 @@ const createSchema = z.object({
   inputType: z.nativeEnum(AttributeInputType),
   sortOrder: z.number().int().optional().default(0),
   isFilterable: z.boolean().optional().default(false),
-  categoryId: z.string().cuid().optional().nullable(),
+  isGlobal: z.boolean().optional().default(true),
+  isVariantAttr: z.boolean().optional().default(true),
+  categoryIds: z.array(z.string().cuid()).optional().default([]),
+  includeChildren: z.boolean().optional().default(false),
   allowedValues: z.array(z.string().min(1)).optional(),
 });
 
@@ -28,15 +31,52 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const { searchParams } = new URL(req.url);
     const isFilterableParam = searchParams.get("isFilterable");
+    const categoryIdParam = searchParams.get("categoryId");
+    
     const where: any = isFilterableParam === "true" ? { isFilterable: true } : {};
 
     const definitions = await prisma.attributeDefinition.findMany({
       where,
       orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
-      include: { allowedValues: { orderBy: { sortOrder: "asc" } } },
+      include: { 
+        allowedValues: { orderBy: { sortOrder: "asc" } },
+        categories: true,
+      },
     });
 
-    const serialized = definitions.map((def) => ({
+    let filteredDefinitions = definitions;
+
+    if (categoryIdParam) {
+      // Find ancestors
+      const ancestorIds: string[] = [];
+      let currentId: string = categoryIdParam;
+      while (currentId) {
+        const cat = await prisma.category.findUnique({ 
+          where: { id: currentId }, 
+          select: { parentId: true } 
+        });
+        if (cat?.parentId) {
+          ancestorIds.push(cat.parentId);
+          currentId = cat.parentId;
+        } else {
+          break;
+        }
+      }
+
+      filteredDefinitions = definitions.filter(def => {
+        if (def.isGlobal) return true;
+        // Direct assignment
+        const directAssign = def.categories.find(c => c.categoryId === categoryIdParam);
+        if (directAssign) return true;
+        // Ancestor assignment with includeChildren = true
+        const ancestorAssign = def.categories.find(c => ancestorIds.includes(c.categoryId) && c.includeChildren);
+        if (ancestorAssign) return true;
+
+        return false;
+      });
+    }
+
+    const serialized = filteredDefinitions.map((def) => ({
       id: def.id,
       key: def.key,
       label: def.label,
@@ -44,7 +84,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       inputType: def.inputType,
       sortOrder: def.sortOrder,
       isFilterable: def.isFilterable,
-      categoryId: def.categoryId,
+      isGlobal: def.isGlobal,
+      isVariantAttr: def.isVariantAttr,
+      categoryIds: def.categories.map((c) => c.categoryId),
       allowedValues: def.allowedValues.map((v) => v.value),
     }));
 
@@ -75,16 +117,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Uniqueness check (handles PostgreSQL NULL uniqueness behavior)
-    const existing = await prisma.attributeDefinition.findFirst({
-      where: { key: validatedData.key, categoryId: validatedData.categoryId ?? null },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "An attribute with this key already exists in this scope." },
-        { status: 409 }
-      );
+    // Uniqueness check
+    if (validatedData.isGlobal) {
+      const existing = await prisma.attributeDefinition.findFirst({
+        where: { key: validatedData.key, isGlobal: true },
+      });
+      if (existing) {
+        return NextResponse.json({ error: "A global attribute with this key already exists." }, { status: 409 });
+      }
+    } else {
+      if (validatedData.categoryIds.length > 0) {
+        const existing = await prisma.attributeDefinition.findFirst({
+          where: { 
+            key: validatedData.key, 
+            isGlobal: false,
+            categories: {
+              some: { categoryId: { in: validatedData.categoryIds } }
+            }
+          },
+        });
+        if (existing) {
+          return NextResponse.json({ error: "An attribute with this key already exists in one of the selected categories." }, { status: 409 });
+        }
+      }
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -96,7 +151,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           inputType: validatedData.inputType,
           sortOrder: validatedData.sortOrder,
           isFilterable: validatedData.isFilterable,
-          categoryId: validatedData.categoryId || null,
+          isGlobal: validatedData.isGlobal,
+          isVariantAttr: validatedData.isVariantAttr,
+          categories: validatedData.isGlobal ? undefined : {
+            create: validatedData.categoryIds.map(cid => ({
+              categoryId: cid,
+              includeChildren: validatedData.includeChildren
+            }))
+          }
         },
       });
 

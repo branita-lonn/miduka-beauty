@@ -39,11 +39,22 @@ export interface AttributeDefinitionPublic {
   inputType: "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN" | "COLOR";
   sortOrder: number;
   isFilterable: boolean;
-  categoryId: string | null;
+  isGlobal: boolean;
+  isVariantAttr: boolean;
+  categoryIds: string[];
   allowedValues: string[]; // value strings sorted by allowedValue.sortOrder
 }
 
 export interface VariantAttributePublic {
+  attributeDefinitionId: string;
+  key: string;
+  label: string;
+  unit: string | null;
+  inputType: "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN" | "COLOR";
+  value: string;
+}
+
+export interface ProductAttributePublic {
   attributeDefinitionId: string;
   key: string;
   label: string;
@@ -164,6 +175,10 @@ export const productWithRelations = Prisma.validator<Prisma.ProductDefaultArgs>(
         },
       },
     },
+    productAttributes: {
+      include: { attributeDefinition: true },
+      orderBy: { attributeDefinition: { sortOrder: "asc" } },
+    },
     flashSale: true,
   },
 });
@@ -210,6 +225,7 @@ export type ProductWithRelationsSerialized = {
     attributes: VariantAttributePublic[];
     label: string; // pre-computed by serializeProduct()
   }[];
+  productAttributes: ProductAttributePublic[];
   flashSale: {
     id: string;
     salePrice: number;

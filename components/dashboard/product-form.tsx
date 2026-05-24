@@ -68,6 +68,13 @@ const formSchema = z.object({
   stockQuantity: z.coerce.number().int().default(0),
   images: z.array(imageSchema).default([]),
   variants: z.array(variantSchema).default([]),
+  productAttributes: z.array(
+    z.object({
+      key: z.string(),
+      attributeDefinitionId: z.string().optional(),
+      value: z.string(),
+    })
+  ).default([]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -126,6 +133,11 @@ export function ProductForm({
               value: attr.value,
             })) || [],
           })) || [],
+          productAttributes: initialData.productAttributes?.map((attr: any) => ({
+            key: attr.key,
+            attributeDefinitionId: attr.attributeDefinitionId,
+            value: attr.value,
+          })) || [],
         }
       : {
           name: "",
@@ -140,6 +152,7 @@ export function ProductForm({
           stockQuantity: 0,
           images: [],
           variants: [],
+          productAttributes: [],
         },
   });
 
@@ -148,11 +161,49 @@ export function ProductForm({
     name: "variants",
   });
 
-  // Category Scope dynamic selection
+  const { fields: productAttrFields } = useFieldArray({
+    control: form.control,
+    name: "productAttributes",
+  });
+
   const selectedCategoryId = form.watch("categoryId");
-  const activeAttributes = availableAttributes.filter(
-    (attr) => !attr.categoryId || attr.categoryId === selectedCategoryId
-  );
+  const [activeAttributes, setActiveAttributes] = useState<AttributeDefinitionPublic[]>(availableAttributes || []);
+
+  React.useEffect(() => {
+    const fetchAttrs = async () => {
+      try {
+        const url = selectedCategoryId && selectedCategoryId !== "none"
+          ? `/api/dashboard/attributes?categoryId=${selectedCategoryId}`
+          : "/api/dashboard/attributes";
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setActiveAttributes(data);
+          
+          // Pre-populate missing product-level attributes
+          const currentProdAttrs = form.getValues("productAttributes") || [];
+          const infoAttrs = data.filter((a: any) => !a.isVariantAttr);
+          
+          const updatedProdAttrs = infoAttrs.map((infoAttr: any) => {
+            const existing = currentProdAttrs.find((pa) => pa.key === infoAttr.key);
+            return existing || { key: infoAttr.key, attributeDefinitionId: infoAttr.id, value: "" };
+          });
+          
+          form.setValue("productAttributes", updatedProdAttrs, { shouldDirty: false });
+        }
+      } catch (e) {
+        console.error("Failed to fetch scoped attributes", e);
+      }
+    };
+    
+    // Only fetch if client-side (to avoid unnecessary initial fetch if availableAttributes is correct)
+    if (selectedCategoryId !== undefined) {
+      fetchAttrs();
+    }
+  }, [selectedCategoryId, form]);
+
+  const activeVariantAttributes = activeAttributes.filter(a => a.isVariantAttr);
+  const activeInfoAttributes = activeAttributes.filter(a => !a.isVariantAttr);
 
   const handleAddVariant = () => {
     appendVariant({
@@ -160,7 +211,7 @@ export function ProductForm({
       priceOverride: undefined,
       stockQuantity: 0,
       isActive: true,
-      attributes: activeAttributes.map((attr) => ({
+      attributes: activeVariantAttributes.map((attr) => ({
         key: attr.key,
         attributeDefinitionId: attr.id,
         value: "",
@@ -614,6 +665,52 @@ export function ProductForm({
                 </div>
               </div>
 
+              {/* Product-Level Specifications */}
+              {activeInfoAttributes.length > 0 && (
+                <div className="space-y-4 pt-2 pb-6 border-b border-border/50">
+                  <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Informational Specifications</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-5 rounded-2xl bg-muted/10 border border-border/50">
+                    {activeInfoAttributes.map((attr, idx) => {
+                      // Find the index in the form's productAttributes array
+                      const currentAttrs = form.getValues("productAttributes") || [];
+                      const fieldIdx = currentAttrs.findIndex((a) => a.key === attr.key);
+                      
+                      // If not found, it will be added on the fly by the VariantAttributeInput onChange
+                      return (
+                        <FormField
+                          key={attr.key}
+                          control={form.control}
+                          name={`productAttributes.${fieldIdx > -1 ? fieldIdx : idx}.value`}
+                          render={({ field }) => {
+                            const value = field.value || "";
+                            return (
+                              <FormItem className="space-y-1">
+                                <FormControl>
+                                  <VariantAttributeInput
+                                    definition={attr}
+                                    value={value}
+                                    onChange={(newVal) => {
+                                      const updated = [...(form.getValues("productAttributes") || [])];
+                                      const foundIdx = updated.findIndex((a: any) => a.key === attr.key);
+                                      if (foundIdx > -1) {
+                                        updated[foundIdx] = { ...updated[foundIdx], value: newVal };
+                                      } else {
+                                        updated.push({ key: attr.key, attributeDefinitionId: attr.id, value: newVal });
+                                      }
+                                      form.setValue("productAttributes", updated, { shouldDirty: true });
+                                    }}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {variantFields.length === 0 ? (
                 <FormField
                   control={form.control}
@@ -667,13 +764,13 @@ export function ProductForm({
                         
                         {/* Dynamic Attributes Grid Column */}
                         <div className="md:col-span-6 space-y-4">
-                          {activeAttributes.length === 0 ? (
+                          {activeVariantAttributes.length === 0 ? (
                             <p className="text-xs text-muted-foreground italic pt-4">
-                              No attributes scoped to this category. Define some in dashboard under Attributes.
+                              No variant attributes scoped to this category. Define some in dashboard under Attributes.
                             </p>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {activeAttributes.map((attr) => (
+                              {activeVariantAttributes.map((attr) => (
                                 <FormField
                                   key={attr.key}
                                   control={form.control}

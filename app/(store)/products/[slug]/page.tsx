@@ -102,6 +102,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           },
         },
       },
+      productAttributes: {
+        include: { attributeDefinition: true },
+      },
       flashSale: true,
     },
   });
@@ -127,7 +130,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     getBundlesForProduct(product.id),
     prisma.attributeDefinition.findMany({
       orderBy: { sortOrder: "asc" },
-      include: { allowedValues: { orderBy: { sortOrder: "asc" } } },
+      include: { allowedValues: { orderBy: { sortOrder: "asc" } }, categories: true },
     }),
   ]);
 
@@ -154,8 +157,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     inputType: d.inputType,
     sortOrder: d.sortOrder,
     isFilterable: d.isFilterable,
-    categoryId: d.categoryId,
-    allowedValues: d.allowedValues.map((av) => av.value),
+    isGlobal: d.isGlobal,
+    isVariantAttr: d.isVariantAttr,
+    categoryIds: d.categories.map((c: any) => c.categoryId),
+    allowedValues: d.allowedValues.map((av: any) => av.value),
   }));
 
   // Pre-serialize for client component

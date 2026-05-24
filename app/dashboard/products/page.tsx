@@ -44,6 +44,9 @@ export default async function ProductsPage() {
           },
         },
       },
+      productAttributes: {
+        include: { attributeDefinition: true },
+      },
       flashSale: true,
     },
     orderBy: { createdAt: "desc" },

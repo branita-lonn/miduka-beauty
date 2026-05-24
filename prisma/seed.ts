@@ -114,7 +114,7 @@ async function main() {
   // --- SECTION 4: Products (30+ products) ---
   console.log("Seeding Attribute Definitions for Fashion...");
   let sizeAttr = await prisma.attributeDefinition.findFirst({
-    where: { key: "size", categoryId: null },
+    where: { key: "size", isGlobal: true },
   });
   if (!sizeAttr) {
     sizeAttr = await prisma.attributeDefinition.create({
@@ -130,7 +130,7 @@ async function main() {
   }
 
   let colourAttr = await prisma.attributeDefinition.findFirst({
-    where: { key: "colour", categoryId: null },
+    where: { key: "colour", isGlobal: true },
   });
   if (!colourAttr) {
     colourAttr = await prisma.attributeDefinition.create({

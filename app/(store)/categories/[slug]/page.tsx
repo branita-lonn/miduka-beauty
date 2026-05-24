@@ -83,12 +83,12 @@ export default async function CategoryPage({ params }: Props) {
     where: {
       isFilterable: true,
       OR: [
-        { categoryId: null },
-        { categoryId: category.id }
+        { isGlobal: true },
+        { categories: { some: { categoryId: category.id } } }
       ]
     },
     orderBy: { sortOrder: "asc" },
-    include: { allowedValues: { orderBy: { sortOrder: "asc" } } },
+    include: { allowedValues: { orderBy: { sortOrder: "asc" } }, categories: true },
   });
 
   const serializedFilters: AttributeDefinitionPublic[] = filterableAttributes.map((d) => ({
@@ -99,8 +99,10 @@ export default async function CategoryPage({ params }: Props) {
     inputType: d.inputType,
     sortOrder: d.sortOrder,
     isFilterable: d.isFilterable,
-    categoryId: d.categoryId,
-    allowedValues: d.allowedValues.map((av) => av.value),
+    isGlobal: d.isGlobal,
+    isVariantAttr: d.isVariantAttr,
+    categoryIds: d.categories.map((c: any) => c.categoryId),
+    allowedValues: d.allowedValues.map((av: any) => av.value),
   }));
 
   const breadcrumbItems = [

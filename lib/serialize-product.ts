@@ -74,6 +74,14 @@ export function serializeProduct(
         label:             computeVariantLabel(attrs),
       };
     }),
+    productAttributes: product.productAttributes ? product.productAttributes.map((pa) => ({
+      attributeDefinitionId: pa.attributeDefinitionId,
+      key:       pa.attributeDefinition.key,
+      label:     pa.attributeDefinition.label,
+      unit:      pa.attributeDefinition.unit,
+      inputType: pa.attributeDefinition.inputType,
+      value:     pa.value,
+    })) : [],
     flashSale: product.flashSale
       ? {
           id:        product.flashSale.id,

@@ -217,16 +217,17 @@ model Product {
   updatedAt      DateTime @updatedAt
   categoryId     String?
 
-  category      Category?        @relation(fields: [categoryId], references: [id])
-  images        ProductImage[]
-  variants      ProductVariant[]
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
-  wishlistItems WishlistItem[]
-  stockAlerts   StockAlert[]
-  reviews       Review[]
-  engagements   Engagement[]
-  flashSale     FlashSale?
+  category          Category?           @relation(fields: [categoryId], references: [id])
+  images            ProductImage[]
+  variants          ProductVariant[]
+  productAttributes ProductAttribute[]  // product-level informational attributes
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+  wishlistItems     WishlistItem[]
+  stockAlerts       StockAlert[]
+  reviews           Review[]
+  engagements       Engagement[]
+  flashSale         FlashSale?
 }
 
 model Category {
@@ -245,7 +246,8 @@ model Category {
   parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
   children Category[] @relation("CategoryToCategory")
   products Product[]
-  attributeDefinitions AttributeDefinition[]
+  // Many-to-many with AttributeDefinition (replaces the old single-categoryId relation)
+  attributeDefinitions AttributeDefinitionCategory[]
 }
 
 model ProductImage {
@@ -281,25 +283,58 @@ model ProductVariant {
 }
 
 model AttributeDefinition {
-  id           String             @id @default(cuid())
-  key          String             // machine-readable, e.g. "ram", "screen_size", "energy_rating"
-  label        String             // human-readable, e.g. "RAM", "Screen Size", "Energy Rating"
-  unit         String?            // optional suffix rendered after the value, e.g. "GB", "inches"
-  inputType    AttributeInputType @default(TEXT)
-  sortOrder    Int                @default(0)
-  isFilterable Boolean            @default(false) // shows in storefront filter sidebar when true
-  categoryId   String?            // null = store-wide; set = scoped to one category
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id            String             @id @default(cuid())
+  key           String             @unique // globally unique — one definition per attribute key
+  label         String             // human-readable, e.g. "RAM", "Screen Size", "Energy Rating"
+  unit          String?            // optional suffix rendered after the value, e.g. "GB", "inches"
+  inputType     AttributeInputType @default(TEXT)
+  sortOrder     Int                @default(0)
+  isFilterable  Boolean            @default(false) // shows in storefront filter sidebar when true
+  isGlobal      Boolean            @default(true)  // true = store-wide; false = scoped via categories join table
+  isVariantAttr Boolean            @default(true)  // true = creates distinct purchasable variant; false = informational product-level spec
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
-  category      Category?                @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Many-to-many with Category (replaces the old single categoryId FK)
+  categories    AttributeDefinitionCategory[]
   allowedValues AttributeAllowedValue[]
-  values        ProductVariantAttribute[]
+  variantValues ProductVariantAttribute[]
+  productValues ProductAttribute[]            // product-level informational attribute values
 
-  @@unique([key, categoryId]) // unique within scope (global or per-category)
-  @@index([categoryId])
+  @@index([isGlobal])
+  @@index([isVariantAttr])
   @@index([isFilterable])
   @@index([sortOrder])
+}
+
+/// Join table: one AttributeDefinition can be scoped to multiple categories.
+/// includeChildren = true means the attribute cascades down to all subcategories of the linked category.
+model AttributeDefinitionCategory {
+  attributeDefinitionId String
+  categoryId            String
+  includeChildren       Boolean @default(false) // cascade to all subcategories when true
+
+  attributeDefinition AttributeDefinition @relation(fields: [attributeDefinitionId], references: [id], onDelete: Cascade)
+  category            Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([attributeDefinitionId, categoryId])
+  @@index([categoryId])
+}
+
+/// Product-level informational attribute: tied to the product directly, not a specific variant.
+/// Used for specs like Processor, OS, Origin that do not create purchasable variants.
+model ProductAttribute {
+  id                    String   @id @default(cuid())
+  productId             String
+  attributeDefinitionId String
+  value                 String
+
+  product             Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeDefinition AttributeDefinition @relation(fields: [attributeDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, attributeDefinitionId]) // one value per attribute per product
+  @@index([productId])
+  @@index([attributeDefinitionId])
 }
 
 model AttributeAllowedValue {
