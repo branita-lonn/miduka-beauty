@@ -179,31 +179,46 @@ export function ProductForm({
         if (res.ok) {
           const data = await res.json();
           setActiveAttributes(data);
-          
-          // Pre-populate missing product-level attributes
-          const currentProdAttrs = form.getValues("productAttributes") || [];
-          const infoAttrs = data.filter((a: any) => !a.isVariantAttr);
-          
-          const updatedProdAttrs = infoAttrs.map((infoAttr: any) => {
-            const existing = currentProdAttrs.find((pa) => pa.key === infoAttr.key);
-            return existing || { key: infoAttr.key, attributeDefinitionId: infoAttr.id, value: "" };
-          });
-          
-          form.setValue("productAttributes", updatedProdAttrs, { shouldDirty: false });
         }
       } catch (e) {
         console.error("Failed to fetch scoped attributes", e);
       }
     };
     
-    // Only fetch if client-side (to avoid unnecessary initial fetch if availableAttributes is correct)
-    if (selectedCategoryId !== undefined) {
-      fetchAttrs();
-    }
-  }, [selectedCategoryId, form]);
+    fetchAttrs();
+  }, [selectedCategoryId]);
 
-  const activeVariantAttributes = activeAttributes.filter(a => a.isVariantAttr);
-  const activeInfoAttributes = activeAttributes.filter(a => !a.isVariantAttr);
+  const activeVariantAttributes = React.useMemo(() => {
+    return activeAttributes.filter(
+      (a) => a.isVariantAttr && (a.isGlobal || (selectedCategoryId && a.categoryIds.includes(selectedCategoryId)))
+    );
+  }, [activeAttributes, selectedCategoryId]);
+
+  const activeInfoAttributes = React.useMemo(() => {
+    return activeAttributes.filter(
+      (a) => !a.isVariantAttr && (a.isGlobal || (selectedCategoryId && a.categoryIds.includes(selectedCategoryId)))
+    );
+  }, [activeAttributes, selectedCategoryId]);
+
+  // Keep productAttributes synchronized with activeInfoAttributes in the form state
+  React.useEffect(() => {
+    const current = form.getValues("productAttributes") || [];
+    const updated = activeInfoAttributes.map((attr) => {
+      const existing = current.find((c) => c.attributeDefinitionId === attr.id || c.key === attr.key);
+      return {
+        key: attr.key,
+        attributeDefinitionId: attr.id,
+        value: existing ? existing.value : "",
+      };
+    });
+    
+    const currentStr = JSON.stringify(current.map(c => ({ key: c.key, value: c.value })));
+    const updatedStr = JSON.stringify(updated.map(u => ({ key: u.key, value: u.value })));
+    
+    if (currentStr !== updatedStr || current.length !== updated.length) {
+      form.setValue("productAttributes", updated, { shouldDirty: true });
+    }
+  }, [activeInfoAttributes, form]);
 
   const handleAddVariant = () => {
     appendVariant({
@@ -671,33 +686,20 @@ export function ProductForm({
                   <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Informational Specifications</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-5 rounded-2xl bg-muted/10 border border-border/50">
                     {activeInfoAttributes.map((attr, idx) => {
-                      // Find the index in the form's productAttributes array
-                      const currentAttrs = form.getValues("productAttributes") || [];
-                      const fieldIdx = currentAttrs.findIndex((a) => a.key === attr.key);
-                      
-                      // If not found, it will be added on the fly by the VariantAttributeInput onChange
                       return (
                         <FormField
                           key={attr.key}
                           control={form.control}
-                          name={`productAttributes.${fieldIdx > -1 ? fieldIdx : idx}.value`}
+                          name={`productAttributes.${idx}.value`}
                           render={({ field }) => {
-                            const value = field.value || "";
                             return (
                               <FormItem className="space-y-1">
                                 <FormControl>
                                   <VariantAttributeInput
                                     definition={attr}
-                                    value={value}
+                                    value={field.value || ""}
                                     onChange={(newVal) => {
-                                      const updated = [...(form.getValues("productAttributes") || [])];
-                                      const foundIdx = updated.findIndex((a: any) => a.key === attr.key);
-                                      if (foundIdx > -1) {
-                                        updated[foundIdx] = { ...updated[foundIdx], value: newVal };
-                                      } else {
-                                        updated.push({ key: attr.key, attributeDefinitionId: attr.id, value: newVal });
-                                      }
-                                      form.setValue("productAttributes", updated, { shouldDirty: true });
+                                      field.onChange(newVal);
                                     }}
                                   />
                                 </FormControl>
