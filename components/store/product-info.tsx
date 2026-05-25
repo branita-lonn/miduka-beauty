@@ -452,11 +452,11 @@ export default function ProductInfo({
       {product.productAttributes && product.productAttributes.length > 0 && (
         <div className="mt-8 border-t border-border pt-6">
           <h3 className="text-lg font-bold mb-4">Specifications</h3>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
             {product.productAttributes.map((attr) => (
-              <div key={attr.key} className="flex flex-col sm:flex-row sm:justify-between py-2.5 border-b border-border/50">
-                <dt className="text-muted-foreground">{attr.label}</dt>
-                <dd className="font-semibold text-foreground text-left sm:text-right mt-0.5 sm:mt-0">
+              <div key={attr.key} className="flex flex-col sm:flex-row gap-4 py-2.5 border-b border-border/50">
+                <dt className="font-semibold text-foreground">{attr.label}:</dt>
+                <dd className="text-muted-foreground text-left sm:text-right mt-0.5 sm:mt-0">
                   {attr.inputType === "BOOLEAN" 
                     ? (attr.value === "true" ? "Yes" : "No") 
                     : attr.unit ? `${attr.value} ${attr.unit}` : attr.value}

@@ -8,7 +8,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   // Fetch live store settings from your database
   const settings = await prisma.storeSettings.findFirst();
   
-  const storeName = settings?.storeName || "MiDuka grocery";
+  const storeName = settings?.storeName || "MiDuka";
   const tagline = settings?.storeTagline || "Your online shopping partner";
   const dynamicLogo = settings?.logoUrl || "/icons/icon-512.png";
 
